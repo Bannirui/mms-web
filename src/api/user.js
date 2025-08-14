@@ -1,14 +1,14 @@
-import { getData, postDataJson } from './api'
+import { getData, postData } from './api'
 
 export function login(data) {
-  return postDataJson('/vue-element-admin/user/login', data)
+  return postData('/api/user/login', data)
 }
 
 // token值
 export function getInfo(token) {
-  return getData('/vue-element-admin/user/info', { 'token': token })
+  return getData(`/api/user/info/${token}`)
 }
 
 export function logout() {
-  return postDataJson('/vue-element-admin/user/logout')
+  return postData('/api/user/logout')
 }

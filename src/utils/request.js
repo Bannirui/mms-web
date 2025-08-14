@@ -1,14 +1,8 @@
 import axios from 'axios'
-import buildURL from 'axios/lib/helpers/buildURL'
 import { merge } from 'axios/lib/utils'
 import { MessageBox, Message } from 'element-ui'
 import store from '@/store'
 import { getToken } from '@/utils/auth'
-
-// 判断参数是不是对象
-function isPlainObj(data) {
-  return data && data.constructor.name === 'Object'
-}
 
 // request interceptor
 const reqInterceptors = [
@@ -20,16 +14,14 @@ const reqInterceptors = [
       // please modify it according to the actual situation
       config.headers['X-Token'] = getToken()
     }
-    // 表单提交还是json提交
-    const isJson = config.useJson === true
-    if (!isJson && isPlainObj(config.data)) {
-      // 转成form data
-      config.headers['Content-Type'] = 'application/x-www-form-urlencoded'
-      config.data = buildURL('', config.data).substr(1)
-    } else if (isJson) {
-      config.headers['Content-Type'] = 'application/json'
-    }
+    // json提交
+    // config.headers['Content-Type'] = 'application/json;charset=utf-8'
     return config
+  },
+  error => {
+    // do something with request error
+    console.log(error) // for debug
+    return Promise.reject(error)
   }
 ]
 
@@ -44,7 +36,7 @@ const respInterceptors = [
         duration: 5 * 1000
       })
       // 50008: Illegal token; 50012: Other clients logged in; 50014: Token expired;
-      if (res.code === 50008 || res.code === 50012 || res.code === 50014) {
+      if ([50008, 50012, 50014].includes(res.code)) {
         // to re-login
         MessageBox.confirm('You have been logged out, you can cancel to stay on this page, or log in again', 'Confirm logout', {
           confirmButtonText: 'Re-Login',

@@ -36,7 +36,7 @@ module.exports = {
       warnings: false,
       errors: true
     },
-    before: require('./mock/mock-server.js'),
+    // before: require('./mock/mock-server.js'),
     proxy: {
       '/dev-api': {
         target: 'http://127.0.0.1:8080', // 这里换成你本机的局域网IP和Spring Boot端口
