@@ -264,13 +264,13 @@ export default {
       })
     },
     handleDelete(row, index) {
+      del(row.id)
       this.$notify({
         title: 'Success',
         message: 'Delete Successfully',
         type: 'success',
         duration: 2000
       })
-      this.list.splice(index, 1)
     },
     handleFetchPv(pv) {
       fetchPv(pv).then(response => {
