@@ -48,7 +48,7 @@
             禁用
           </el-button>
           <el-button v-if="row.status!='deleted'" size="mini" type="danger" @click="handleDelete(row,$index)">
-            Delete
+            删除
           </el-button>
         </template>
       </el-table-column>
@@ -187,11 +187,18 @@ export default {
       this.listQuery.page = 1
       this.getList()
     },
+    /**
+     * 修改状态
+     * @param status 期望的状态
+     */
     handleModifyStatus(row, status) {
+      // 调用接口
+      updateStatus(row.id, status)
       this.$message({
         message: '操作Success',
         type: 'success'
       })
+      // this.$set(row, 'status', status)
       row.status = status
     },
     sortChange(data) {
@@ -263,7 +270,9 @@ export default {
         }
       })
     },
+    // 删除
     handleDelete(row, index) {
+      // 调用接口
       del(row.id)
       this.$notify({
         title: 'Success',
@@ -271,6 +280,8 @@ export default {
         type: 'success',
         duration: 2000
       })
+      // 移除页面上的记录
+      this.list.splice(index, 1)
     },
     handleFetchPv(pv) {
       fetchPv(pv).then(response => {
