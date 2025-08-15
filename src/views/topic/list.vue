@@ -85,14 +85,14 @@
           <el-input v-model="temp.name" placeholder="主题名"/>
         </el-form-item>
         <el-form-item label="申请人" prop="userId">
-          <el-input v-model="temp.userId" readonly/>
+          <el-input v-model="temp.userId" readonly disabled/>
         </el-form-item>
         <el-form-item label="申请域(appId)" prop="appId">
-          <el-input v-model="temp.appId" placeholder="appId" />
+          <el-input v-model.number="temp.appId" placeholder="appId" />
         </el-form-item>
-        <el-form-item label="环境" prop="checked_envs">
+        <el-form-item label="环境" prop="checked_env_ids">
           <el-checkbox-group
-            v-model="checked_env_ids"
+            v-model="temp.checked_env_ids"
             @change="handleCheckedEnvChange"
           >
             <el-checkbox v-for="(env, index) in all_envs" :key="index" :label="env.id">
@@ -100,7 +100,7 @@
             </el-checkbox>
           </el-checkbox-group>
         </el-form-item>
-        <el-form-item label="MQ类型">
+        <el-form-item label="MQ类型" prop="brokerType">
           <el-radio-group
             v-model="temp.brokerType"
             text-color="#626aef"
@@ -118,10 +118,10 @@
         <el-form-item label="发送速度" prop="tps">
           <el-input-number v-model="temp.tps" :min="1" :max="1024"/>条/秒
         </el-form-item>
-        <el-form-item label="消息体大小" prop="tps">
+        <el-form-item label="消息体大小" prop="msgSz">
           <el-input-number v-model="temp.msgSz" :min="1" :max="1024"/>字节
         </el-form-item>
-        <el-form-item label="mark">
+        <el-form-item label="remark" prop="remark">
           <el-input v-model="temp.remark" :autosize="{ minRows: 2, maxRows: 4}" type="textarea" placeholder="Please input" />
         </el-form-item>
       </el-form>
@@ -211,14 +211,12 @@ export default {
         brokerType: undefined,
         tps: undefined,
         msgSz: undefined,
-        // 环境 num
-        envIds: [],
-        remark: ''
+        remark: '',
+        // 选中的环境 num 为什么要放在temp里面 因为表单校验规则rule不允许独立
+        checked_env_ids: []
       },
       // 所有enable的环境 {id, name, sortId, status}
       all_envs: [],
-      // 选中的环境 num
-      checked_env_ids: [],
       dialogFormVisible: false,
       dialogStatus: '',
       textMap: {
@@ -227,10 +225,24 @@ export default {
       },
       dialogPvVisible: false,
       pvData: [],
+      // 提交申请表单字段的校验规则
       rules: {
-        type: [{ required: true, message: 'type is required', trigger: 'change' }],
-        timestamp: [{ type: 'date', required: true, message: 'timestamp is required', trigger: 'change' }],
-        title: [{ required: true, message: 'title is required', trigger: 'blur' }]
+        name: [{ required: true, message: 'topic名称必填', trigger: 'blur' }],
+        appId: [{ type: 'number', required: true, message: 'app应用必填数字', trigger: 'blur' }],
+        checked_env_ids: [{
+          validator: (rule, value, callback) => {
+            if (!value || value.length === 0) {
+              callback(new Error('环境必选'))
+            } else {
+              callback()
+            }
+          },
+          trigger: 'change'
+        }],
+        brokerType: [{ required: true, message: 'MQ集群类型必选', trigger: 'change' }],
+        tps: [{ type: 'number', required: true, message: 'MQ的TPS必填', trigger: 'blur' }],
+        msgSz: [{ type: 'number', required: true, message: '消息体大小必填', trigger: 'blur' }],
+        remark: [{ required: true, message: 'remark必填', trigger: 'blur' }]
       },
       downloadLoading: false,
       // 申请topic时下拉选择
@@ -314,15 +326,15 @@ export default {
     resetTemp() {
       this.temp = {
         id: undefined,
-        userId: undefined,
+        // 当前登陆用户
+        userId: this.$store.state.user.id,
         name: '',
         appId: undefined,
         brokerType: undefined,
         tps: 1024,
         msgSz: 1024,
-        // env id
-        envIds: [],
-        remark: ''
+        remark: '',
+        checked_env_ids: []
       }
     },
     // 申请topic
@@ -338,8 +350,6 @@ export default {
     createData() {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
-          // todo 填充当前用户id
-          this.temp.userId = 1024
           // 创建topic
           createTopic({
             userId: this.temp.userId,
@@ -348,12 +358,11 @@ export default {
             tps: this.temp.tps,
             msgSz: this.temp.msgSz,
             clusterType: this.temp.brokerType,
-            envs: this.checked_env_ids.map(x => ({ envId: x })),
+            envs: this.temp.checked_env_ids.map(x => ({ envId: x })),
             remark: this.temp.remark
           }).then(() => {
-            this.temp.envIds = this.checked_env_ids
             const env_names = this.all_envs
-              .filter(env => this.temp.envIds.includes(env.id))
+              .filter(env => this.temp.checked_env_ids.includes(env.id))
               .map(env => env.name)
             const newRow = {
               topicName: this.temp.name,
