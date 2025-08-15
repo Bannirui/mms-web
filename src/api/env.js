@@ -3,7 +3,9 @@ import { delData, getData, postData, putData } from './api'
 export function fetchList() {
   return getData('/api/env/allEnv')
 }
-
+export function allEnableEnv() {
+  return getData('/api/env/allEnableEnv')
+}
 export function addEnv(data) {
   return postData('/api/env/add', data)
 }

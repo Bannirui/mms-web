@@ -31,114 +31,54 @@
       v-loading="listLoading"
       :data="list"
       border
-      fit
+      :fit="false"
       highlight-current-row
-      style="width: 100%;"
+      style="width: auto; display: inline-block;"
       @sort-change="sortChange"
     >
-      <!--<el-table-column label="ID" prop="id" sortable="custom" align="center" width="80" :class-name="getSortClass('id')">-->
-      <!--  <template slot-scope="{row}">-->
-      <!--    <span>{{ row.topicId }}</span>-->
-      <!--  </template>-->
-      <!--</el-table-column>-->
-      <!--<el-table-column label="Date" width="150px" align="center">-->
-      <!--  <template slot-scope="{row}">-->
-      <!--    <span>{{ row.timestamp | parseTime('{y}-{m}-{d} {h}:{i}') }}</span>-->
-      <!--  </template>-->
-      <!--</el-table-column>-->
-      <!--<el-table-column label="主题名" min-width="150px">-->
-      <!--  <template slot-scope="{row}">-->
-      <!--    <span class="link-type" @click="handleUpdate(row)">{{ row.id }}</span>-->
-      <!--    <el-tag>{{ row.type | typeFilter }}</el-tag>-->
-      <!--  </template>-->
-      <!--</el-table-column>-->
       <el-table-column label="主题名" width="110px" align="center">
         <template slot-scope="{row}">
           <span>{{ row.topicName }}</span>
         </template>
       </el-table-column>
-      <!--<el-table-column label="Author" width="110px" align="center">-->
-      <!--  <template slot-scope="{row}">-->
-      <!--    <span>{{ row.author }}</span>-->
-      <!--  </template>-->
-      <!--</el-table-column>-->
-      <!--<el-table-column v-if="showReviewer" label="Reviewer" width="110px" align="center">-->
-      <!--  <template slot-scope="{row}">-->
-      <!--    <span style="color:red;">{{ row.reviewer }}</span>-->
-      <!--  </template>-->
-      <!--</el-table-column>-->
-      <!--<el-table-column label="Imp" width="80px">-->
-      <!--  <template slot-scope="{row}">-->
-      <!--    <svg-icon v-for="n in + row.importance" :key="n" icon-class="star" class="meta-item__icon" />-->
-      <!--  </template>-->
-      <!--</el-table-column>-->
-      <!--<el-table-column label="Readings" align="center" width="95">-->
-      <!--  <template slot-scope="{row}">-->
-      <!--    <span v-if="row.pageviews" class="link-type" @click="handleFetchPv(row.pageviews)">{{ row.pageviews }}</span>-->
-      <!--    <span v-else>0</span>-->
-      <!--  </template>-->
-      <!--</el-table-column>-->
-      <!--<el-table-column label="Status" class-name="status-col" width="100">-->
-      <!--  <template slot-scope="{row}">-->
-      <!--    <el-tag :type="row.status | statusFilter">-->
-      <!--      {{ row.status }}-->
-      <!--    </el-tag>-->
-      <!--  </template>-->
-      <!--</el-table-column>-->
-      <!--<el-table-column label="Actions" align="center" width="230" class-name="small-padding fixed-width">-->
-      <!--  <template slot-scope="{row,$index}">-->
-      <!--    <el-button type="primary" size="mini" @click="handleUpdate(row)">-->
-      <!--      Edit-->
-      <!--    </el-button>-->
-      <!--    <el-button v-if="row.status!='published'" size="mini" type="success" @click="handleModifyStatus(row,'published')">-->
-      <!--      Publish-->
-      <!--    </el-button>-->
-      <!--    <el-button v-if="row.status!='draft'" size="mini" @click="handleModifyStatus(row,'draft')">-->
-      <!--      Draft-->
-      <!--    </el-button>-->
-      <!--    <el-button v-if="row.status!='deleted'" size="mini" type="danger" @click="handleDelete(row,$index)">-->
-      <!--      Delete-->
-      <!--    </el-button>-->
-      <!--  </template>-->
-      <!--</el-table-column>-->
     </el-table>
 
     <pagination v-show="total>0" :total="total" :page.sync="listQuery.page" :limit.sync="listQuery.size" @pagination="getList" />
 
     <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
       <!--申请topic表单-->
-      <el-form ref="dataForm" :rules="rules" :model="applyTopic" label-position="left" label-width="70px" style="width: 400px; margin-left:50px;">
+      <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="120px" style="width: 400px; margin-left:50px;">
         <el-form-item label="主题名" prop="name">
-          <el-input v-model="applyTopic.name" placeholder="主题名"/>
+          <el-input v-model="temp.name" placeholder="主题名"/>
         </el-form-item>
         <el-form-item label="申请人" prop="userId">
-          <el-input v-model="applyTopic.userId" readonly/>
+          <el-input v-model="temp.userId" readonly/>
         </el-form-item>
         <el-form-item label="申请域(appId)" prop="appId">
-          <el-input v-model="applyTopic.appId" placeholder="appId" />
+          <el-input v-model="temp.appId" placeholder="appId" />
         </el-form-item>
         <el-form-item label="环境" prop="checked_envs">
           <el-checkbox-group
-            v-model="checked_envs"
+            v-model="checked_env_ids"
             @change="handleCheckedEnvChange"
           >
-            <el-checkbox v-for="env in all_envs" :key="env" :label="env" :value="env">
-              {{ env }}
+            <el-checkbox v-for="env in all_envs" :key="env.id" :label="env.id">
+              {{ env.name }}
             </el-checkbox>
           </el-checkbox-group>
         </el-form-item>
-        <el-form-item label="Title" prop="title">
-          <el-input v-model="temp.title" />
-        </el-form-item>
-        <el-form-item label="Status">
-          <el-select v-model="temp.status" class="filter-item" placeholder="Please select">
-            <el-option v-for="item in statusOptions" :key="item" :label="item" :value="item" />
+        <el-form-item label="MQ类型">
+          <el-select v-model="temp.brokerType" class="filter-item" placeholder="选择MQ类型">
+            <el-option v-for="item in MqBrokerTypeArr" :key="item.code" :label="item.name" :value="item.code" />
           </el-select>
         </el-form-item>
-        <el-form-item label="Imp">
-          <el-rate v-model="temp.importance" :colors="['#99A9BF', '#F7BA2A', '#FF9900']" :max="3" style="margin-top:8px;" />
+        <el-form-item label="发送速度" prop="tps">
+          <el-input-number v-model="temp.tps" :min="1" :max="1024"/>条/秒
         </el-form-item>
-        <el-form-item label="Remark">
+        <el-form-item label="消息体大小" prop="tps">
+          <el-input-number v-model="temp.msgSz" :min="1" :max="1024"/>字节
+        </el-form-item>
+        <el-form-item label="mark">
           <el-input v-model="temp.remark" :autosize="{ minRows: 2, maxRows: 4}" type="textarea" placeholder="Please input" />
         </el-form-item>
       </el-form>
@@ -165,7 +105,8 @@
 </template>
 
 <script>
-import { fetchList, fetchPv, createTopic, updateArticle } from '@/api/topic'
+import { fetchList, createTopic } from '@/api/topic'
+import { allEnableEnv } from '@/api/env'
 import waves from '@/directive/waves' // waves directive
 import { parseTime } from '@/utils'
 import Pagination from '@/components/Pagination' // secondary package based on el-pagination
@@ -223,36 +164,33 @@ export default {
       importanceOptions: [1, 2, 3],
       calendarTypeOptions,
       sortOptions: [{ label: 'ID Ascending', key: '+id' }, { label: 'ID Descending', key: '-id' }],
-      statusOptions: ['published', 'draft', 'deleted'],
+      // 申请topic时下拉选择
+      MqBrokerTypeArr: [
+        { code: 1, name: 'Kafka' },
+        { code: 2, name: 'Rocket' }
+      ],
       showReviewer: false,
-      // 申请topic
-      applyTopic: {
+      // 绑定表单 新增和更新时候用
+      temp: {
+        id: undefined,
         // 谁申请的
         userId: undefined,
         // topic name
         name: '',
         // 申请给哪个业务
         appId: undefined,
+        // mq类型
+        brokerType: undefined,
         tps: undefined,
         msgSz: undefined,
-        // mq集群类型 rocket or kafka
-        clusterType: undefined,
         // 环境
-        envs: []
+        envIds: [],
+        remark: ''
       },
-      // 环境
-      all_envs: [1, 2, 3],
+      // 所有enable的环境
+      all_envs: [],
       // 选中的环境
-      checked_envs: [],
-      temp: {
-        id: undefined,
-        importance: 1,
-        remark: '',
-        timestamp: new Date(),
-        title: '',
-        type: '',
-        status: 'published'
-      },
+      checked_env_ids: [],
       dialogFormVisible: false,
       dialogStatus: '',
       textMap: {
@@ -270,13 +208,16 @@ export default {
     }
   },
   created() {
+    // 所有topic
     this.getList()
+    // 有的环境
+    this.getAllEnv()
   },
   methods: {
     // 分页拿到列表
     getList() {
       this.listLoading = true
-      fetchList(this.listQuery).then(resp => {
+      fetchList(this.listQuery.page, this.listQuery.size).then(resp => {
         this.list = resp.data
         this.total = resp.total
 
@@ -284,6 +225,12 @@ export default {
         setTimeout(() => {
           this.listLoading = false
         }, 1.5 * 1000)
+      })
+    },
+    // 的有环境
+    getAllEnv() {
+      allEnableEnv().then(resp => {
+        this.all_envs = resp.data
       })
     },
     handleFilter() {
@@ -314,30 +261,20 @@ export default {
     resetTemp() {
       this.temp = {
         id: undefined,
-        importance: 1,
-        remark: '',
-        timestamp: new Date(),
-        title: '',
-        status: 'published',
-        type: ''
-      }
-    },
-    resetApplyTopic() {
-      this.applyTopic = {
-        // todo 自动填充当前用户id
-        userId: 1024,
+        userId: undefined,
         name: '',
         appId: undefined,
-        tps: undefined,
-        msgSz: undefined,
-        clusterType: undefined,
+        brokerType: undefined,
+        tps: 1024,
+        msgSz: 1024,
         // env id
-        envs: []
+        envIds: [],
+        remark: ''
       }
     },
     // 申请topic
     handleCreate() {
-      this.resetApplyTopic()
+      this.resetTemp()
       // 触发createData函数
       this.dialogStatus = 'create'
       this.dialogFormVisible = true
@@ -348,10 +285,19 @@ export default {
     createData() {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
-          this.temp.id = parseInt(Math.random() * 100) + 1024 // mock a id
-          this.temp.author = 'vue-element-admin'
+          // todo 填充当前用户id
+          this.temp.userId = 1024
           // 创建topic
-          createTopic(this.temp).then(() => {
+          createTopic({
+            userId: this.temp.userId,
+            name: this.temp.name,
+            appId: this.temp.appId,
+            tps: this.temp.tps,
+            msgSz: this.temp.msgSz,
+            clusterType: this.temp.brokerType,
+            envs: this.checked_env_ids.map(x => ({ envId: x })),
+            remark: this.temp.remark
+          }).then(() => {
             this.list.unshift(this.temp)
             this.dialogFormVisible = false
             this.$notify({
@@ -436,10 +382,7 @@ export default {
     },
     // 点选checkbox后被选择的
     handleCheckedEnvChange: function(checkedVals) {
-      console.log('点击事件', checkedVals)
-      // const checkedCount = value.length
-      // checkAll.value = checkedCount === cities.length
-      // isIndeterminate.value = checkedCount > 0 && checkedCount < cities.length
+      // todo
     }
   }
 }
