@@ -41,6 +41,41 @@
           <span>{{ row.topicName }}</span>
         </template>
       </el-table-column>
+      <el-table-column label="状态" width="110px" align="center">
+        <template slot-scope="{row}">
+          <span>{{ row.topicStatus }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="申请人" width="110px" align="center">
+        <template slot-scope="{row}">
+          <span>{{ row.topicUser }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="应用" width="110px" align="center">
+        <template slot-scope="{row}">
+          <span>{{ row.topicApp }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="TPS" width="110px" align="center">
+        <template slot-scope="{row}">
+          <span>{{ row.tps }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="消息大小" width="110px" align="center">
+        <template slot-scope="{row}">
+          <span>{{ row.msgSz }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="分区" width="110px" align="center">
+        <template slot-scope="{row}">
+          <span>{{ row.partitions }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="备注信息" width="110px" align="center">
+        <template slot-scope="{row}">
+          <span>{{ row.remark }}</span>
+        </template>
+      </el-table-column>
     </el-table>
 
     <pagination v-show="total>0" :total="total" :page.sync="listQuery.page" :limit.sync="listQuery.size" @pagination="getList" />
@@ -218,8 +253,20 @@ export default {
     getList() {
       this.listLoading = true
       fetchList(this.listQuery.page, this.listQuery.size).then(resp => {
-        this.list = resp.data
         this.total = resp.total
+        this.list.push(...resp.data.map(
+          item => ({
+            topicName: item.topic.name,
+            topicStatus: item.topic.status,
+            topicUser: item.topic.userId,
+            topicApp: item.topic.appId,
+            tps: item.topic.tps,
+            msgSz: item.topic.msgSz,
+            partitions: item.topic.partitions,
+            remark: item.topic.remark,
+            envs: item.envs.map(env => env.name)
+          })
+        ))
 
         // Just to simulate the time of the request
         setTimeout(() => {
