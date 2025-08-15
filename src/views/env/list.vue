@@ -36,10 +36,10 @@
           <span>{{ statusMap[row.status] || '未知' }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="Actions" align="center" width="230" class-name="small-padding fixed-width">
+      <el-table-column label="Actions" align="center" width="290px" class-name="small-padding fixed-width">
         <template slot-scope="{row,$index}">
           <el-button type="primary" size="mini" @click="handleUpdate(row)">
-            Edit
+            编辑
           </el-button>
           <el-button v-if="row.status!=2" size="mini" type="success" @click="handleModifyStatus(row,2)">
             可用
@@ -55,12 +55,12 @@
     </el-table>
 
     <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
-      <el-form ref="dataForm" :rules="rules" :model="addEnvReq" label-position="left" label-width="70px" style="width: 400px; margin-left:50px;">
+      <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="70px" style="width: 400px; margin-left:50px;">
         <el-form-item label="环境名" prop="name">
-          <el-input v-model="addEnvReq.name" placeholder="环境名"/>
+          <el-input v-model="temp.name" placeholder="环境名"/>
         </el-form-item>
         <el-form-item label="顺序" prop="sortId">
-          <el-input-number v-model="addEnvReq.sortId" :min="1" :max="10"/>
+          <el-input-number v-model="temp.sortId" :min="1" :max="10"/>
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -86,7 +86,7 @@
 </template>
 
 <script>
-import { fetchList, addEnv, del, updateStatus } from '@/api/env'
+import { fetchList, addEnv, del, updateStatus, updateEnv } from '@/api/env'
 import waves from '@/directive/waves' // waves directive
 import { parseTime } from '@/utils'
 
@@ -134,14 +134,12 @@ export default {
       all_envs: [1, 2, 3],
       // 选中的环境
       checked_envs: [],
+      // 绑定dataForm表单 新增和更新的时候用
       temp: {
         id: undefined,
-        importance: 1,
-        remark: '',
-        timestamp: new Date(),
-        title: '',
-        type: '',
-        status: 'published'
+        name: '',
+        sortId: 0,
+        status: undefined
       },
       dialogFormVisible: false,
       dialogStatus: '',
@@ -157,11 +155,6 @@ export default {
         title: [{ required: true, message: 'title is required', trigger: 'blur' }]
       },
       downloadLoading: false,
-      // 新增请求
-      addEnvReq: {
-        name: '',
-        sortId: 0
-      },
       statusMap: {
         1: '新建',
         2: '可用',
@@ -193,13 +186,13 @@ export default {
      */
     handleModifyStatus(row, status) {
       // 调用接口
-      updateStatus(row.id, status)
-      this.$message({
-        message: '操作Success',
-        type: 'success'
+      updateStatus(row.id, status).then(() => {
+        this.$message({
+          message: '操作Success',
+          type: 'success'
+        })
+        row.status = status
       })
-      // this.$set(row, 'status', status)
-      row.status = status
     },
     sortChange(data) {
       const { prop, order } = data
@@ -216,7 +209,7 @@ export default {
       this.handleFilter()
     },
     handleCreate() {
-      this.resetAddEnvReq()
+      this.resetTemp()
       // 触发createData函数
       this.dialogStatus = 'create'
       this.dialogFormVisible = true
@@ -228,7 +221,7 @@ export default {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
           // 新增环境
-          addEnv(this.addEnvReq).then(() => {
+          addEnv({ name: this.temp.name, sortId: this.temp.sortId }).then(() => {
             // 刷新列表
             this.getList()
             this.dialogFormVisible = false
@@ -242,9 +235,11 @@ export default {
         }
       })
     },
+    // 修改
     handleUpdate(row) {
-      this.temp = Object.assign({}, row) // copy obj
-      this.temp.timestamp = new Date(this.temp.timestamp)
+      // 缓存行数据
+      this.temp = Object.assign({}, row)
+      // 触发更新对话框
       this.dialogStatus = 'update'
       this.dialogFormVisible = true
       this.$nextTick(() => {
@@ -255,8 +250,8 @@ export default {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
           const tempData = Object.assign({}, this.temp)
-          tempData.timestamp = +new Date(tempData.timestamp) // change Thu Nov 30 2017 16:41:05 GMT+0800 (CST) to 1512031311464
-          updateArticle(tempData).then(() => {
+          // 调用接口
+          updateEnv(tempData.id, { name: tempData.name, sortId: tempData.sortId }).then(() => {
             const index = this.list.findIndex(v => v.id === this.temp.id)
             this.list.splice(index, 1, this.temp)
             this.dialogFormVisible = false
@@ -316,9 +311,12 @@ export default {
       const sort = this.listQuery.sort
       return sort === `+${key}` ? 'ascending' : 'descending'
     },
-    resetAddEnvReq: function() {
-      this.addEnvReq.name = ''
-      this.addEnvReq.sortId = 0
+    resetTemp: function() {
+      this.temp = {
+        id: undefined,
+        name: '',
+        sortId: 0
+      }
     }
   }
 }

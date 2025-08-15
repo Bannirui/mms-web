@@ -16,3 +16,6 @@ export function updateStatus(id, status) {
 export function del(id) {
   return delData(`/api/env/del/${id}`)
 }
+export function updateEnv(id, data) {
+  return putData(`/api/env/update/${id}`, data)
+}
