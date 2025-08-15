@@ -1,28 +1,14 @@
 <template>
   <div class="app-container">
     <div class="filter-container">
-      <el-input v-model="listQuery.title" placeholder="Title" style="width: 200px;" class="filter-item" @keyup.enter.native="handleFilter" />
-      <el-select v-model="listQuery.importance" placeholder="Imp" clearable style="width: 90px" class="filter-item">
-        <el-option v-for="item in importanceOptions" :key="item" :label="item" :value="item" />
-      </el-select>
-      <el-select v-model="listQuery.type" placeholder="Type" clearable class="filter-item" style="width: 130px">
-        <el-option v-for="item in calendarTypeOptions" :key="item.key" :label="item.display_name+'('+item.key+')'" :value="item.key" />
-      </el-select>
-      <el-select v-model="listQuery.sort" style="width: 140px" class="filter-item" @change="handleFilter">
-        <el-option v-for="item in sortOptions" :key="item.key" :label="item.label" :value="item.key" />
-      </el-select>
+      <el-input v-model="listQuery.topicName" placeholder="Topic名称" style="width: 200px;" class="filter-item" @keyup.enter.native="handleFilter" />
+      <el-input v-model="listQuery.userId" placeholder="申请人" style="width: 200px;" class="filter-item" @keyup.enter.native="handleFilter" />
       <el-button v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
-        Search
+        查询
       </el-button>
       <el-button class="filter-item" style="margin-left: 10px;" type="primary" icon="el-icon-edit" @click="handleCreate">
         新增
       </el-button>
-      <el-button v-waves :loading="downloadLoading" class="filter-item" type="primary" icon="el-icon-download" @click="handleDownload">
-        Export
-      </el-button>
-      <el-checkbox v-model="showReviewer" class="filter-item" style="margin-left:15px;" @change="tableKey=tableKey+1">
-        reviewer
-      </el-checkbox>
     </div>
 
     <!--查询结果-->
@@ -43,7 +29,7 @@
       </el-table-column>
       <el-table-column label="状态" width="110px" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.topicStatus }}</span>
+          <span>{{ topicStatusMap[row.topicStatus] }}</span>
         </template>
       </el-table-column>
       <el-table-column label="申请人" width="110px" align="center">
@@ -54,6 +40,18 @@
       <el-table-column label="应用" width="110px" align="center">
         <template slot-scope="{row}">
           <span>{{ row.topicApp }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="环境" min-width="150px" align="center">
+        <template slot-scope="{ row }">
+          <el-tag
+            v-for="(envName, index) in row.envs"
+            :key="index"
+            :type="envName2TagType[envName]"
+            size="mini"
+          >
+            {{ envName }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="TPS" width="110px" align="center">
@@ -71,7 +69,7 @@
           <span>{{ row.partitions }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="备注信息" width="110px" align="center">
+      <el-table-column label="备注信息" align="center" min-width="150px" show-overflow-tooltip>
         <template slot-scope="{row}">
           <span>{{ row.remark }}</span>
         </template>
@@ -97,15 +95,25 @@
             v-model="checked_env_ids"
             @change="handleCheckedEnvChange"
           >
-            <el-checkbox v-for="env in all_envs" :key="env.id" :label="env.id">
+            <el-checkbox v-for="(env, index) in all_envs" :key="index" :label="env.id">
               {{ env.name }}
             </el-checkbox>
           </el-checkbox-group>
         </el-form-item>
         <el-form-item label="MQ类型">
-          <el-select v-model="temp.brokerType" class="filter-item" placeholder="选择MQ类型">
-            <el-option v-for="item in MqBrokerTypeArr" :key="item.code" :label="item.name" :value="item.code" />
-          </el-select>
+          <el-radio-group
+            v-model="temp.brokerType"
+            text-color="#626aef"
+            fill="#6cf"
+          >
+            <el-radio-button
+              v-for="(v, k) in mqBrokerTypeMap"
+              :key="k"
+              :label="k"
+            >
+              {{ v }}
+            </el-radio-button>
+          </el-radio-group>
         </el-form-item>
         <el-form-item label="发送速度" prop="tps">
           <el-input-number v-model="temp.tps" :min="1" :max="1024"/>条/秒
@@ -146,19 +154,6 @@ import waves from '@/directive/waves' // waves directive
 import { parseTime } from '@/utils'
 import Pagination from '@/components/Pagination' // secondary package based on el-pagination
 
-const calendarTypeOptions = [
-  { key: 'CN', display_name: 'China' },
-  { key: 'US', display_name: 'USA' },
-  { key: 'JP', display_name: 'Japan' },
-  { key: 'EU', display_name: 'Eurozone' }
-]
-
-// arr to obj, such as { CN : "China", US : "USA" }
-const calendarTypeKeyValue = calendarTypeOptions.reduce((acc, cur) => {
-  acc[cur.key] = cur.display_name
-  return acc
-}, {})
-
 export default {
   name: 'TopicList',
   components: { Pagination },
@@ -171,17 +166,22 @@ export default {
         deleted: 'danger'
       }
       return statusMap[status]
-    },
-    typeFilter(type) {
-      return calendarTypeKeyValue[type]
     }
   },
   data() {
     return {
+      // 环境映射tag
+      envName2TagType: {
+        'prod': 'success',
+        'PROD': 'success',
+        'test': 'warning',
+        'TEST': 'warning',
+        'dev': 'primary',
+        'DEV': 'primary'
+      },
       tableKey: 0,
       /**
        * 后端接口查询回来的列表
-       * @type {Array<{id: number, name: string, age: number}>}
        */
       list: [],
       // 全量记录条数
@@ -191,19 +191,12 @@ export default {
       listQuery: {
         page: 1,
         size: 20,
-        importance: undefined,
-        title: undefined,
-        type: undefined,
-        sort: '+id'
+        // 查询条件 topic
+        topicName: '',
+        // 查询条件 用户id
+        userId: null
       },
-      importanceOptions: [1, 2, 3],
-      calendarTypeOptions,
       sortOptions: [{ label: 'ID Ascending', key: '+id' }, { label: 'ID Descending', key: '-id' }],
-      // 申请topic时下拉选择
-      MqBrokerTypeArr: [
-        { code: 1, name: 'Kafka' },
-        { code: 2, name: 'Rocket' }
-      ],
       showReviewer: false,
       // 绑定表单 新增和更新时候用
       temp: {
@@ -214,17 +207,17 @@ export default {
         name: '',
         // 申请给哪个业务
         appId: undefined,
-        // mq类型
+        // mq类型 number
         brokerType: undefined,
         tps: undefined,
         msgSz: undefined,
-        // 环境
+        // 环境 num
         envIds: [],
         remark: ''
       },
-      // 所有enable的环境
+      // 所有enable的环境 {id, name, sortId, status}
       all_envs: [],
-      // 选中的环境
+      // 选中的环境 num
       checked_env_ids: [],
       dialogFormVisible: false,
       dialogStatus: '',
@@ -239,7 +232,20 @@ export default {
         timestamp: [{ type: 'date', required: true, message: 'timestamp is required', trigger: 'change' }],
         title: [{ required: true, message: 'title is required', trigger: 'blur' }]
       },
-      downloadLoading: false
+      downloadLoading: false,
+      // 申请topic时下拉选择
+      mqBrokerTypeMap: {
+        1: 'Kafka',
+        2: 'Rocket'
+      },
+      // topic状态映射
+      topicStatusMap: {
+        0: '删除',
+        1: '待审批',
+        2: '已审批',
+        4: '待审批',
+        8: '已审批'
+      }
     }
   },
   created() {
@@ -252,9 +258,9 @@ export default {
     // 分页拿到列表
     getList() {
       this.listLoading = true
-      fetchList(this.listQuery.page, this.listQuery.size).then(resp => {
+      fetchList(this.listQuery.page, this.listQuery.size, this.listQuery.topicName, this.listQuery.userId).then(resp => {
         this.total = resp.total
-        this.list.push(...resp.data.map(
+        this.list = resp.data.map(
           item => ({
             topicName: item.topic.name,
             topicStatus: item.topic.status,
@@ -266,7 +272,7 @@ export default {
             remark: item.topic.remark,
             envs: item.envs.map(env => env.name)
           })
-        ))
+        )
 
         // Just to simulate the time of the request
         setTimeout(() => {
@@ -274,7 +280,7 @@ export default {
         }, 1.5 * 1000)
       })
     },
-    // 的有环境
+    // 所有的环境
     getAllEnv() {
       allEnableEnv().then(resp => {
         this.all_envs = resp.data
@@ -345,7 +351,21 @@ export default {
             envs: this.checked_env_ids.map(x => ({ envId: x })),
             remark: this.temp.remark
           }).then(() => {
-            this.list.unshift(this.temp)
+            this.temp.envIds = this.checked_env_ids
+            const env_names = this.all_envs
+              .filter(env => this.temp.envIds.includes(env.id))
+              .map(env => env.name)
+            const newRow = {
+              topicName: this.temp.name,
+              topicStatus: 1,
+              topicUser: this.temp.userId,
+              topicApp: this.temp.appId,
+              tps: this.temp.tps,
+              msgSz: this.temp.msgSz,
+              remark: this.temp.remark,
+              envs: env_names
+            }
+            this.list.unshift(newRow)
             this.dialogFormVisible = false
             this.$notify({
               title: 'Success',
