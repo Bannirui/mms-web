@@ -21,3 +21,6 @@ export function del(id) {
 export function updateEnv(id, data) {
   return putData(`/api/env/update/${id}`, data)
 }
+export function listServer() {
+  return getData('/api/env/listServer')
+}

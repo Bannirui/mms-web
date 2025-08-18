@@ -39,7 +39,7 @@ module.exports = {
     // before: require('./mock/mock-server.js'),
     proxy: {
       '/dev-api': {
-        target: 'http://192.168.31.168:8080', // 这里换成你本机的局域网IP和Spring Boot端口
+        target: 'http://127.0.0.1:8080', // 这里换成你本机的局域网IP和Spring Boot端口
         changeOrigin: true,
         pathRewrite: {
           '^/dev-api': '' // 去掉请求路径中的/dev-api前缀

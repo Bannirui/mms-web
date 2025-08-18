@@ -12,9 +12,6 @@ import topicRouter from './modules/topic'
 import envRouter from './modules/env'
 // 权限
 import permissionRouter from './modules/permisson'
-import permisson from "./modules/permisson";
-import env from "./modules/env";
-
 
 /**
  * constantRoutes
@@ -60,9 +57,9 @@ export const constantRoutes = [
     children: [
       {
         path: 'dashboard',
-        component: () => import('@/views/dashboard/index'),
+        component: () => import('@/views/home/index'),
         name: 'Dashboard',
-        meta: { title: 'Dashboard', icon: 'dashboard', affix: true }
+        meta: { title: '首页', icon: 'dashboard', affix: true }
       }
     ]
   },
