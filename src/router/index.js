@@ -7,7 +7,6 @@ Vue.use(Router)
 import Layout from '@/layout'
 
 /* Router Modules */
-// topic
 import topicRouter from './modules/topic'
 import envRouter from './modules/env'
 // 权限

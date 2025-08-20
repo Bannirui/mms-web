@@ -1,4 +1,4 @@
-import { delData, getData, postData, putData } from './api'
+import { postData } from './api'
 
 // 向关联环境添加主机
 export function addHost(envId, data) {

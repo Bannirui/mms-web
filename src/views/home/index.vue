@@ -3,16 +3,19 @@
     <el-container style="height: 100vh">
       <!-- 左侧菜单 -->
       <el-aside width="260px" style="background: #fff; border-right: 1px solid #eee">
-        <el-menu class="el-menu-vertical-demo" :default-openeds="['0','1']">
+        <el-menu class="el-menu-vertical-demo" :default-openeds="allOpeneds">
           <template v-for="(env, envIdx) in serverList">
             <!-- 环境 -->
             <el-submenu :index="String(envIdx)" :key="env.envName">
               <template slot="title">
                 <span>{{ env.envName }}</span>
                 <!-- 为环境添加主机 -->
-                <el-button class="filter-item" style="margin-left: 10px;" type="primary" icon="el-icon-edit" @click="handleCreateHost(env.envId)">
-                  新增Host
-                </el-button>
+                <el-button
+                  type="text"
+                  icon="el-icon-plus"
+                  style="margin-left:auto; color:#666;"
+                  @click="handleCreateHost(env.envId)"
+                ></el-button>
               </template>
               <!-- 主机 -->
               <el-submenu
@@ -23,9 +26,12 @@
                 <template slot="title">
                   <span>{{ host.name }}</span>
                   <!-- 添加服务 -->
-                  <el-button class="filter-item" style="margin-left: 10px;" type="primary" icon="el-icon-edit" @click="handleCreate">
-                    新增Server
-                  </el-button>
+                  <el-button
+                    type="text"
+                    icon="el-icon-plus"
+                    style="margin-left:auto; color:#666;"
+                    @click="handleCreateServer(env.envId, host.id)"
+                  ></el-button>
                 </template>
                 <!-- 服务 -->
                 <el-menu-item
@@ -94,16 +100,13 @@
       </div>
     </el-dialog>
     <!--主机-->
-    <el-dialog :title="hostDialogStatus==='create'?'Create':'Edit'" :visible.sync="hostDialogFormVisible">
-      <el-form ref="hostDataForm" :rules="hostRules" :model="envTmp" label-position="left" label-width="100px" style="width: 400px; margin-left:50px;">
+    <el-dialog :title="hostDialogStatus==='create'?'新增主机':'编辑主机'" :visible.sync="hostDialogFormVisible">
+      <el-form ref="hostDataForm" :rules="hostRules" :model="hostTmp" label-position="left" label-width="100px" style="width: 400px; margin-left:50px;">
         <el-form-item label="名称" prop="name">
           <el-input v-model="hostTmp.name" placeholder="主机名称"/>
         </el-form-item>
         <el-form-item label="主机域名(ip)" prop="host">
           <el-input v-model="hostTmp.host" placeholder="主机域名或ip地址"/>
-        </el-form-item>
-        <el-form-item label="端口" prop="port">
-          <el-input-number v-model="hostTmp.port" :min="1" :max="65535"/>
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -111,6 +114,40 @@
           Cancel
         </el-button>
         <el-button type="primary" @click="hostDialogStatus==='create'?createHostData():updateHostData()">
+          Confirm
+        </el-button>
+      </div>
+    </el-dialog>
+    <!--主机实例上的服务-->
+    <el-dialog :title="serverDialogStatus==='create'?'新增服务':'编辑服务'" :visible.sync="serverDialogFormVisible">
+      <el-form ref="serverDataForm" :rules="serverRules" :model="serverTmp" label-position="left" label-width="100px" style="width: 400px; margin-left:50px;">
+        <el-form-item label="名称" prop="name">
+          <el-input v-model="serverTmp.name" placeholder="服务名称"/>
+        </el-form-item>
+        <el-form-item label="类型" prop="type">
+          <el-radio-group
+            v-model="serverTmp.type"
+            text-color="#626aef"
+            fill="#6cf"
+          >
+            <el-radio-button
+              v-for="(v, k) in serverTypeMap"
+              :key="k"
+              :label="k"
+            >
+              {{ v }}
+            </el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="端口" prop="port">
+          <el-input-number v-model="serverTmp.port" :min="1" :max="65536"/>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="serverDialogFormVisible = false">
+          Cancel
+        </el-button>
+        <el-button type="primary" @click="serverDialogStatus==='create'?createServerData():updateServerData()">
           Confirm
         </el-button>
       </div>
@@ -123,6 +160,7 @@ import * as echarts from 'echarts'
 import { listServer } from '@/api/env'
 import { addEnv } from '@/api/env'
 import { addHost } from '@/api/host'
+import { addServer } from '@/api/server'
 
 export default {
   name: 'ClusterMonitor',
@@ -133,21 +171,55 @@ export default {
   created() {
     this.listServer()
   },
+  computed: {
+    // 左边层级全部展开
+    allOpeneds() {
+      const arr = []
+      this.serverList.forEach((env, envIdx) => {
+        arr.push(String(envIdx))
+        if (env.hosts) {
+          env.hosts.forEach((_, hostIdx) => {
+            arr.push(`${envIdx}-${hostIdx}`)
+          })
+        }
+      })
+      return arr
+    }
+  },
   data() {
     return {
+      // 上线主机服务时下拉选择
+      serverTypeMap: {
+        1: 'Kafka',
+        2: 'Rocket',
+        4: 'ZooKeeper'
+      },
+      // 添加/修改环境表单校验
       envRules: {
         type: [{ required: true, message: 'type is required', trigger: 'change' }],
         timestamp: [{ type: 'date', required: true, message: 'timestamp is required', trigger: 'change' }],
         title: [{ required: true, message: 'title is required', trigger: 'blur' }]
       },
+      // 添加/修改主机表单校验
       hostRules: {
         type: [{ required: true, message: 'type is required', trigger: 'change' }],
         timestamp: [{ type: 'date', required: true, message: 'timestamp is required', trigger: 'change' }],
         title: [{ required: true, message: 'title is required', trigger: 'blur' }]
       },
-      // 添加环境的对话框 create or update
+      // 添加/修改服务表单校验
+      serverRules: {
+        type: [{ required: true, message: 'type is required', trigger: 'change' }],
+        timestamp: [{ type: 'date', required: true, message: 'timestamp is required', trigger: 'change' }],
+        title: [{ required: true, message: 'title is required', trigger: 'blur' }]
+      },
+      // 添加时的对话框类型 create or update
       envDialogStatus: '',
+      hostDialogStatus: '',
+      serverDialogStatus: '',
+      // 控制对话框显示
       envDialogFormVisible: false,
+      hostDialogFormVisible: false,
+      serverDialogFormVisible: false,
       // 环境
       envTmp: {
         id: undefined,
@@ -155,23 +227,30 @@ export default {
         sortId: 0,
         status: undefined
       },
-      // 添加host
-      hostDialogStatus: '',
-      hostDialogFormVisible: false,
-      // 环境
+      // 主机
       hostTmp: {
         id: undefined,
         name: '',
         host: '',
-        port: undefined,
         envId: undefined,
         status: undefined
+      },
+      // 服务
+      serverTmp: {
+        id: undefined,
+        name: '',
+        type: undefined,
+        port: undefined,
+        status: undefined,
+        hostId: undefined,
+        envId: undefined
       },
       // 服务
       serverList: []
     }
   },
   methods: {
+    // 为环境添加主机
     handleCreateHost(envId) {
       this.resetHostTmp()
       this.hostTmp.envId = envId
@@ -182,6 +261,56 @@ export default {
         this.$refs['hostDataForm'].clearValidate()
       })
     },
+    // 为主机添加服务
+    handleCreateServer(envId, hostId) {
+      this.resetServerTmp()
+      this.serverTmp.envId = envId
+      this.serverTmp.hostId = hostId
+      this.serverTmp.port = 1024
+      this.serverDialogStatus = 'create'
+      this.serverDialogFormVisible = true
+      this.$nextTick(() => {
+        this.$refs['serverDataForm'].clearValidate()
+      })
+    },
+    // 添加服务
+    createServerData() {
+      this.$refs['serverDataForm'].validate((valid) => {
+        if (valid) {
+          // 调用接口
+          addServer(this.serverTmp.hostId,
+            {
+              name: this.serverTmp.name,
+              type: this.serverTmp.type,
+              port: this.serverTmp.port
+            }
+          ).then(response => {
+            // 新增后拿到了数据库id
+            this.serverTmp.id = response.data
+            // 新增的server添加到页面上
+            // 找到env的分组
+            const envGroup = this.serverList.find(env => env.envId === this.serverTmp.envId)
+            if (envGroup) {
+              if (envGroup.hosts) {
+                const hostGroup = envGroup.hosts.find(host => host.id === this.serverTmp.hostId)
+                if (!hostGroup.servers) {
+                  hostGroup.servers = []
+                }
+                hostGroup.servers.push(this.serverTmp)
+              }
+            }
+            this.serverDialogFormVisible = false
+            this.$notify({
+              title: 'Success',
+              message: 'Created Successfully',
+              type: 'success',
+              duration: 2000
+            })
+          })
+        }
+      })
+    },
+    // 添加环境
     createHostData() {
       this.$refs['hostDataForm'].validate((valid) => {
         if (valid) {
@@ -194,7 +323,14 @@ export default {
             }
           ).then(response => {
             // 新增的host添加到页面上
-            // todo
+            // 找到env的分组
+            const target = this.serverList.find(item => item.envId === this.hostTmp.envId)
+            if (target) {
+              if (!target.hosts) {
+                target.hosts = []
+              }
+              target.hosts.push(this.hostTmp)
+            }
             this.hostDialogFormVisible = false
             this.$notify({
               title: 'Success',
@@ -244,6 +380,16 @@ export default {
         status: undefined
       }
     },
+    resetServerTmp: function() {
+      this.serverTmp = {
+        id: undefined,
+        name: '',
+        port: undefined,
+        status: undefined,
+        hostId: undefined,
+        envId: undefined
+      }
+    },
     handleCreateEnv() {
       this.resetEnvTmp()
       this.envDialogStatus = 'create'
@@ -253,7 +399,6 @@ export default {
       })
     },
     handleServiceClick(envId, hostId, serverId) {
-      console.log('点击了:', envId, hostId, serverId)
       // 这里你可以触发右侧 echarts 的刷新逻辑
     },
     // 所有的环境的服务
