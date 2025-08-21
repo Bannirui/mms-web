@@ -335,6 +335,7 @@ export default {
               port: this.hostTmp.port
             }
           ).then(response => {
+            // 接口会返回新增主机的id
             // 新增的host添加到页面上
             // 找到env的分组
             const target = this.serverList.find(item => item.envId === this.hostTmp.envId)
@@ -342,6 +343,7 @@ export default {
               if (!target.hosts) {
                 target.hosts = []
               }
+              this.hostTmp.id = response.data
               target.hosts.push(this.hostTmp)
             }
             this.hostDialogFormVisible = false
@@ -365,7 +367,7 @@ export default {
               sortId: this.envTmp.sortId
             }
           ).then(resp => {
-            // 环境添加好后 接口返回新增的环境id 刷新后页面上
+            // 环境添加好后 接口返回新增的环境id 刷新到页面上
             this.serverList.push({ envId: resp.data, envName: this.envTmp.name })
             this.envDialogFormVisible = false
             this.$notify({
