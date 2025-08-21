@@ -3,6 +3,7 @@ import Layout from '@/layout'
 const envRouter = {
   path: '/env',
   component: Layout,
+  hidden: true,
   redirect: 'noredirect',
   name: 'Env',
   meta: {
@@ -13,8 +14,7 @@ const envRouter = {
     {
       path: 'list',
       component: () => import('@/views/env/list.vue'),
-      name: 'EnvList',
-      meta: { title: '环境管理' }
+      hidden: true
     }
   ]
 }

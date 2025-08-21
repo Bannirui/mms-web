@@ -36,24 +36,32 @@
           <span>{{ statusMap[row.status] || '未知' }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="Actions" align="center" width="290px" class-name="small-padding fixed-width">
+      <el-table-column label="zk" width="180px" align="center">
+        <template slot-scope="{row}">
+          <span v-if="row.zkName">{{ row.zkName }}[{{row.zkHost}}:{{row.zkPort}}]</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="Actions" align="center" width="480px" class-name="small-padding fixed-width">
         <template slot-scope="{row,$index}">
-          <el-button type="primary" size="mini" @click="handleUpdate(row)">
+          <el-button v-if="row.status!=4" type="primary" size="mini" @click="handleUpdate(row)">
             编辑
           </el-button>
           <el-button v-if="row.status!=2" size="mini" type="success" @click="handleModifyStatus(row,2)">
             可用
           </el-button>
-          <el-button v-if="row.status!=4" size="mini" @click="handleModifyStatus(row,4)">
+          <el-button v-if="row.status!=1 && row.status!=4" size="mini" @click="handleModifyStatus(row,4)">
             禁用
           </el-button>
           <el-button v-if="row.status!='deleted'" size="mini" type="danger" @click="handleDelete(row,$index)">
             删除
           </el-button>
+          <el-button v-if="row.status==2" size="mini" type="success" @click="handleUpdateDatasource(row)">
+            关联数据源
+          </el-button>
         </template>
       </el-table-column>
     </el-table>
-
+    <!--环境-->
     <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
       <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="70px" style="width: 400px; margin-left:50px;">
         <el-form-item label="环境名" prop="name">
@@ -72,23 +80,45 @@
         </el-button>
       </div>
     </el-dialog>
-
-    <el-dialog :visible.sync="dialogPvVisible" title="Reading statistics">
-      <el-table :data="pvData" border fit highlight-current-row style="width: 100%">
-        <el-table-column prop="key" label="Channel" />
-        <el-table-column prop="pv" label="Pv" />
-      </el-table>
-      <span slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="dialogPvVisible = false">Confirm</el-button>
-      </span>
+    <!--zk-->
+    <el-dialog :title="textMap[datasourceDialogStatus]" :visible.sync="datasourceDialogFormVisible">
+      <el-form ref="datasourceDataForm" :rules="datasourceRules" :model="temp" label-position="left" label-width="70px" style="width: 400px; margin-left:50px;">
+        <el-form-item label="环境名" prop="name">
+          <el-input v-model="temp.name" placeholder="环境名" disabled/>
+        </el-form-item>
+        <el-form-item label="zk" prop="zk">
+          <el-radio-group
+            v-model="temp.zkDataSourceId"
+            text-color="#626aef"
+            fill="#6cf"
+          >
+            <el-radio-button
+              v-for="(v, idx) in zkServers"
+              :key="idx"
+              :label="v.serverId"
+            >
+              {{ v.serverName }}[{{ v.host }}:{{ v.port }}]
+            </el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="datasourceDialogFormVisible = false">
+          Cancel
+        </el-button>
+        <el-button type="primary" @click="datasourceDialogStatus==='create'?createDatasource():updateDatasource()">
+          Confirm
+        </el-button>
+      </div>
     </el-dialog>
   </div>
 </template>
 
 <script>
-import { fetchList, addEnv, del, updateStatus, updateEnv } from '@/api/env'
+import { fetchList, addEnv, del, updateStatus, updateEnv, envBindZk } from '@/api/env'
 import waves from '@/directive/waves' // waves directive
 import { parseTime } from '@/utils'
+import { getServer8Type } from '@/api/server'
 
 const calendarTypeOptions = [
   { key: 'CN', display_name: 'China' },
@@ -121,8 +151,10 @@ export default {
   },
   data() {
     return {
+      // 数据源 zk [serverId, serverName, host, port]
+      zkServers: [],
       tableKey: 0,
-      // 全量
+      // 全量环境[{id,name,sortId,status,zkId,zkName,zkHost,zkPort}]
       list: [],
       listLoading: true,
       importanceOptions: [1, 2, 3],
@@ -134,15 +166,19 @@ export default {
       all_envs: [1, 2, 3],
       // 选中的环境
       checked_envs: [],
-      // 绑定dataForm表单 新增和更新的时候用
+      // form表单新增和更新环境的时候用 给环境添加数据源
       temp: {
         id: undefined,
         name: '',
         sortId: 0,
-        status: undefined
+        status: undefined,
+        // 环境关联的数据源
+        zkDataSourceId: undefined
       },
       dialogFormVisible: false,
+      datasourceDialogFormVisible: false,
       dialogStatus: '',
+      datasourceDialogStatus: '',
       textMap: {
         update: 'Edit',
         create: 'Create'
@@ -154,8 +190,12 @@ export default {
         timestamp: [{ type: 'date', required: true, message: 'timestamp is required', trigger: 'change' }],
         title: [{ required: true, message: 'title is required', trigger: 'blur' }]
       },
+      // 给环境添加数据源表单校验
+      datasourceRules: {
+      },
       downloadLoading: false,
       statusMap: {
+        0: '删除',
         1: '新建',
         2: '可用',
         4: '禁用'
@@ -166,6 +206,11 @@ export default {
     this.getList()
   },
   methods: {
+    getServerByType(serverType) {
+      getServer8Type(serverType).then(res => {
+        this.zkServers = res.data
+      })
+    },
     getList() {
       this.listLoading = true
       fetchList().then(resp => {
@@ -217,6 +262,56 @@ export default {
         this.$refs['dataForm'].clearValidate()
       })
     },
+    // 添加环境的数据源
+    createDatasource() {
+      this.$refs['datasourceDataForm'].validate((valid) => {
+        if (valid) {
+          // 绑定数据源
+          envBindZk(this.temp.id, { zkId: this.temp.zkDataSourceId }).then(resp => {
+            // todo
+            // 接口返回的zk信息缓存到内存
+            this.datasourceDialogFormVisible = false
+            this.$notify({
+              title: 'Success',
+              message: 'Created Successfully',
+              type: 'success',
+              duration: 2000
+            })
+          })
+        }
+      })
+    },
+    // 更新环境的数据源
+    updateDatasource() {
+      this.$refs['datasourceDataForm'].validate((valid) => {
+        if (valid) {
+          // 调用接口
+          envBindZk(this.temp.id, { zkId: this.temp.zkDataSourceId }).then(resp => {
+            // 绑定成功后把对应的zk信息带到页面
+            const zk = this.zkServers.find(x => x.serverId === this.temp.zkDataSourceId)
+            if (zk) {
+              // 找到要更新zk信息的那条env记录
+              const env = this.list.find(x => x.id === this.temp.id)
+              if (env) {
+                env.zkId = zk.serverId
+                env.zkName = zk.serverName
+                env.zkHost = zk.host
+                env.zkPort = zk.port
+              }
+            }
+            // 关闭对话框
+            this.datasourceDialogFormVisible = false
+            this.$notify({
+              title: 'Success',
+              message: 'Update Successfully',
+              type: 'success',
+              duration: 2000
+            })
+          })
+        }
+      })
+    },
+    // 添加环境
     createData() {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
@@ -235,7 +330,7 @@ export default {
         }
       })
     },
-    // 修改
+    // 修改环境
     handleUpdate(row) {
       // 缓存行数据
       this.temp = Object.assign({}, row)
@@ -246,6 +341,19 @@ export default {
         this.$refs['dataForm'].clearValidate()
       })
     },
+    // 修改数据源
+    handleUpdateDatasource(row) {
+      // 缓存行数据
+      this.temp = Object.assign({}, row)
+      // 触发更新对话框
+      this.datasourceDialogStatus = 'update'
+      this.datasourceDialogFormVisible = true
+      this.getServerByType(4)
+      this.$nextTick(() => {
+        this.$refs['datasourceDataForm'].clearValidate()
+      })
+    },
+    // 更新环境
     updateData() {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {

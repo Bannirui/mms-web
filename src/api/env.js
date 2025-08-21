@@ -21,6 +21,20 @@ export function del(id) {
 export function updateEnv(id, data) {
   return putData(`/api/env/update/${id}`, data)
 }
+
+/**
+ * 环境-主机-服务
+ * @returns data=[[envId, envName, [id, name, [id, name]]]]
+ */
 export function listServer() {
   return getData('/api/env/listServer')
+}
+/**
+ * 给环境绑定/换绑zk
+ * @param envId 给哪个服务绑定zk
+ * @param zkId zk服务的id
+ * @returns {AxiosPromise<any>}
+ */
+export function envBindZk(envId, data) {
+  return putData(`/api/env/updateDataSource/${envId}`, data)
 }

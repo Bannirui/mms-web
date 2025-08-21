@@ -9,6 +9,13 @@
             <el-submenu :index="String(envIdx)" :key="env.envName">
               <template slot="title">
                 <span>{{ env.envName }}</span>
+                <!--跳转到环境列表-->
+                <el-button
+                  type="text"
+                  icon="el-icon-link"
+                  style="margin-left:auto; color:#666;"
+                  @click="goToEnvList(env.envId)"
+                ></el-button>
                 <!-- 为环境添加主机 -->
                 <el-button
                   type="text"
@@ -47,7 +54,7 @@
           </template>
         </el-menu>
 
-        <!-- 左下角 悬浮按钮 -->
+        <!-- 左下角 添加环境 -->
         <el-button
           type="primary"
           circle
@@ -245,11 +252,17 @@ export default {
         hostId: undefined,
         envId: undefined
       },
-      // 服务
+      // 服务 [[envId, envName, [id, name, [id, name]]]]
       serverList: []
     }
   },
   methods: {
+    // 路由跳转
+    goToEnvList(envId) {
+      this.$router.push({
+        path: '/env/list'
+      })
+    },
     // 为环境添加主机
     handleCreateHost(envId) {
       this.resetHostTmp()
@@ -351,8 +364,9 @@ export default {
               name: this.envTmp.name,
               sortId: this.envTmp.sortId
             }
-          ).then(response => {
-            // 新增的env状态待审批 页面不需要展示
+          ).then(resp => {
+            // 环境添加好后 接口返回新增的环境id 刷新后页面上
+            this.serverList.push({ envId: resp.data, envName: this.envTmp.name })
             this.envDialogFormVisible = false
             this.$notify({
               title: 'Success',
@@ -390,6 +404,7 @@ export default {
         envId: undefined
       }
     },
+    // 添加环境
     handleCreateEnv() {
       this.resetEnvTmp()
       this.envDialogStatus = 'create'
