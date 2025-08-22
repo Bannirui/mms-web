@@ -74,6 +74,22 @@
           <span>{{ row.remark }}</span>
         </template>
       </el-table-column>
+      <el-table-column label="Actions" align="center" width="230" class-name="small-padding fixed-width">
+        <template slot-scope="{row,$index}">
+          <el-button type="primary" size="mini" @click="handleUpdate(row)">
+            Edit
+          </el-button>
+          <el-button v-if="row.status!='published'" size="mini" type="success" @click="handleModifyStatus(row,'published')">
+            Publish
+          </el-button>
+          <el-button v-if="row.status!='draft'" size="mini" @click="handleModifyStatus(row,'draft')">
+            Draft
+          </el-button>
+          <el-button v-if="row.status!='deleted'" size="mini" type="danger" @click="handleDelete(row,$index)">
+            Delete
+          </el-button>
+        </template>
+      </el-table-column>
     </el-table>
 
     <pagination v-show="total>0" :total="total" :page.sync="listQuery.page" :limit.sync="listQuery.size" @pagination="getList" />
@@ -134,16 +150,6 @@
         </el-button>
       </div>
     </el-dialog>
-
-    <el-dialog :visible.sync="dialogPvVisible" title="Reading statistics">
-      <el-table :data="pvData" border fit highlight-current-row style="width: 100%">
-        <el-table-column prop="key" label="Channel" />
-        <el-table-column prop="pv" label="Pv" />
-      </el-table>
-      <span slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="dialogPvVisible = false">Confirm</el-button>
-      </span>
-    </el-dialog>
   </div>
 </template>
 
@@ -182,6 +188,9 @@ export default {
       tableKey: 0,
       /**
        * 后端接口查询回来的列表
+       *   [{topicId,topicName,topicType,topicStatus,topicTps,topicMsgSz,topicPartitions,topicReplication,topicRemark,userId,userName,appId,appName,
+       *   envs: [{envId,envName}]
+       *   }]
        */
       list: [],
       // 全量记录条数
@@ -223,8 +232,6 @@ export default {
         update: 'Edit',
         create: 'Create'
       },
-      dialogPvVisible: false,
-      pvData: [],
       // 提交申请表单字段的校验规则
       rules: {
         name: [{ required: true, message: 'topic名称必填', trigger: 'blur' }],
@@ -274,14 +281,17 @@ export default {
         this.total = resp.total
         this.list = resp.data.map(
           item => ({
-            topicName: item.topic.name,
-            topicStatus: item.topic.status,
-            topicUser: item.topic.userId,
-            topicApp: item.topic.appId,
-            tps: item.topic.tps,
-            msgSz: item.topic.msgSz,
-            partitions: item.topic.partitions,
-            remark: item.topic.remark,
+            topicId: item.topicId,
+            topicName: item.topicName,
+            topicType: item.topicType,
+            topicStatus: item.topicStatus,
+            tps: item.topicTps,
+            msgSz: item.topicMsgSz,
+            partitions: item.topicPartitions,
+            replication: item.topicReplication,
+            remark: item.topicRemark,
+            topicUser: item.userName,
+            topicApp: item.appName,
             envs: item.envs.map(env => env.name)
           })
         )

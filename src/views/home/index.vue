@@ -421,6 +421,7 @@ export default {
     // 所有的环境的服务
     listServer() {
       listServer().then(resp => {
+        console.log('拉取到的环境-主机-服务', resp.data)
         this.serverList = resp.data
       })
     },

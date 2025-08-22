@@ -1,5 +1,39 @@
 import { getData, postData } from './api'
 
+/**
+ * topic的相关信息
+ * @param page 页码
+ * @param size 页容
+ * @param topicName 要不要过滤topic name
+ * @param userId 要不要过滤用户id
+ * return
+ * {
+ *   total,
+ *   data: [
+ *   {
+ *     topicId,
+ *     topicName,
+ *     topicType,
+ *     topicStatus,
+ *     topicTps,
+ *     topicMsgSz,
+ *     topicPartitions,
+ *     topicReplication,
+ *     topicRemark,
+ *     userId,
+ *     userName,
+ *     appId,
+ *     appName,
+ *     envs: [
+ *       {
+ *         envId,
+ *         envName
+ *       }
+ *     ]
+ *   }
+ *   ]
+ * }
+ */
 export function fetchList(page, size, topicName, userId) {
   const params = new URLSearchParams({ page, size })
   // 只有非空字符串才加
