@@ -112,7 +112,7 @@
         </el-form-item>
         <el-form-item label="环境资源分配" prop="env">
           <el-tabs v-model="activeEnv">
-            <el-tab-pane v-for="env in temp.envs" :key="env.id" :label="env.name" :name="String(env.id)">
+            <el-tab-pane v-for="env in temp.envs" :key="env.id" :label="env.name" :name="env.name">
               <!-- 每个环境下的资源选择，用单选按钮组 -->
               <el-radio-group v-model="selectedResources[env.id]">
                 <el-radio
@@ -120,7 +120,7 @@
                   :key="srv.serverId"
                   :label="srv.serverId"
                 >
-                  {{srv.hostName}}{{srv.serverName}}-{{ srv.hostHost }}:{{ srv.serverPort }}
+                  {{ srv.hostName }}{{ srv.serverName }}-{{ srv.hostHost }}:{{ srv.serverPort }}
                 </el-radio>
               </el-radio-group>
             </el-tab-pane>
@@ -140,10 +140,10 @@
     <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
       <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="120px" style="width: 400px; margin-left:50px;">
         <el-form-item label="主题名" prop="name">
-          <el-input v-model="temp.name" placeholder="主题名"/>
+          <el-input v-model="temp.name" placeholder="主题名" />
         </el-form-item>
         <el-form-item label="申请人" prop="userId">
-          <el-input v-model="temp.userId" readonly disabled/>
+          <el-input v-model="temp.userId" readonly disabled />
         </el-form-item>
         <el-form-item label="申请域(appId)" prop="appId">
           <el-input v-model.number="temp.appId" placeholder="appId" />
@@ -174,10 +174,10 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item label="发送速度" prop="tps">
-          <el-input-number v-model="temp.tps" :min="1" :max="1024"/>条/秒
+          <el-input-number v-model="temp.tps" :min="1" :max="1024" />条/秒
         </el-form-item>
         <el-form-item label="消息体大小" prop="msgSz">
-          <el-input-number v-model="temp.msgSz" :min="1" :max="1024"/>字节
+          <el-input-number v-model="temp.msgSz" :min="1" :max="1024" />字节
         </el-form-item>
         <el-form-item label="remark" prop="remark">
           <el-input v-model="temp.remark" :autosize="{ minRows: 2, maxRows: 4}" type="textarea" placeholder="Please input" />
@@ -219,7 +219,7 @@ export default {
   },
   data() {
     return {
-      activeEnv: '', // 绑定el-tabs的v-model
+      activeEnv: '开发', // 绑定el-tabs的v-model
       // 每个环境下可供选择的mq资源 {环境id: [{hostId, hostName, hostHost, serverId, serverName, serverPort}]}
       envResources: {},
       // 分配给不同环境topic的机器资源 {envId: serverId}
