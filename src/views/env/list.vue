@@ -93,11 +93,11 @@
             fill="#6cf"
           >
             <el-radio-button
-              v-for="(v, idx) in zkServers"
-              :key="idx"
+              v-for="v in zkServerMap[temp.id] || []"
+              :key="v.serverId"
               :label="v.serverId"
             >
-              {{ v.serverName }}[{{ v.host }}:{{ v.port }}]
+              {{v.envName}}-{{ v.serverName }}[{{ v.hostHost }}:{{ v.serverPort }}]
             </el-radio-button>
           </el-radio-group>
         </el-form-item>
@@ -151,8 +151,8 @@ export default {
   },
   data() {
     return {
-      // 数据源 zk [serverId, serverName, host, port]
-      zkServers: [],
+      // zk服务信息 key=envId val=[{serverId, serverName, serverPort, hostId, hostName, hostHost, envId, envName}]
+      zkServerMap: {},
       tableKey: 0,
       // 全量环境[{id,name,sortId,status,zkId,zkName,zkHost,zkPort}]
       list: [],
@@ -168,11 +168,12 @@ export default {
       checked_envs: [],
       // form表单新增和更新环境的时候用 给环境添加数据源
       temp: {
+        // envId
         id: undefined,
         name: '',
         sortId: 0,
         status: undefined,
-        // 环境关联的数据源
+        // 环境关联的数据源 serverId
         zkDataSourceId: undefined
       },
       dialogFormVisible: false,
@@ -206,11 +207,6 @@ export default {
     this.getList()
   },
   methods: {
-    getServerByType(serverType) {
-      getServer8Type(serverType).then(res => {
-        this.zkServers = res.data
-      })
-    },
     getList() {
       this.listLoading = true
       fetchList().then(resp => {
@@ -288,15 +284,15 @@ export default {
           // 调用接口
           envBindZk(this.temp.id, { zkId: this.temp.zkDataSourceId }).then(resp => {
             // 绑定成功后把对应的zk信息带到页面
-            const zk = this.zkServers.find(x => x.serverId === this.temp.zkDataSourceId)
+            const zk = this.zkServerMap[this.temp.id].find(x => x.serverId === this.temp.zkDataSourceId)
             if (zk) {
               // 找到要更新zk信息的那条env记录
               const env = this.list.find(x => x.id === this.temp.id)
               if (env) {
                 env.zkId = zk.serverId
                 env.zkName = zk.serverName
-                env.zkHost = zk.host
-                env.zkPort = zk.port
+                env.zkHost = zk.hostHost
+                env.zkPort = zk.serverPort
               }
             }
             // 关闭对话框
@@ -348,7 +344,13 @@ export default {
       // 触发更新对话框
       this.datasourceDialogStatus = 'update'
       this.datasourceDialogFormVisible = true
-      this.getServerByType(4)
+      // 拿到zk服务信息
+      getServer8Type(4).then(res => {
+        res.data.forEach(x => {
+          this.zkServerMap[x.envId] = x.servers
+        })
+        console.log('zkServerMap', this.zkServerMap)
+      })
       this.$nextTick(() => {
         this.$refs['datasourceDataForm'].clearValidate()
       })

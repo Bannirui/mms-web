@@ -9,7 +9,8 @@ export function addServer(hostId, data) {
 
 /**
  * 服务实例
- * @returns [serverId, serverName, host, port]
+ * @serverType 服务器类型
+ * @returns [serverId, serverName, serverPort, hostId, hostName, hostHost, envId, envName]
  */
 export function getServer8Type(serverType) {
   return getData(`/api/server/${serverType}`)

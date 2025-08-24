@@ -43,6 +43,10 @@ export function fetchList(page, size, topicName, userId) {
   return getData(`/api/topic/querypage?${params.toString()}`)
 }
 
+/**
+ * 申请topic
+ * @returns topic的id
+ */
 export function createTopic(data) {
   return postData('/api/topic/add', data)
 }
