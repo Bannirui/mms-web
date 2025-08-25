@@ -1,4 +1,4 @@
-import { getData, postData } from './api'
+import {getData, postData, putData} from './api'
 
 /**
  * topic的相关信息
@@ -49,4 +49,10 @@ export function fetchList(page, size, topicName, userId) {
  */
 export function createTopic(data) {
   return postData('/api/topic/add', data)
+}
+/**
+ * 审批topic
+ */
+export function approveTopic(topicId, data) {
+  return putData(`/api/topic/${topicId}/approve`, data)
 }

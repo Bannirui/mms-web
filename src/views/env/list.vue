@@ -341,18 +341,18 @@ export default {
     handleUpdateDatasource(row) {
       // 缓存行数据
       this.temp = Object.assign({}, row)
-      // 触发更新对话框
-      this.datasourceDialogStatus = 'update'
-      this.datasourceDialogFormVisible = true
       // 拿到zk服务信息
       getServer8Type(4).then(res => {
         res.data.forEach(x => {
           this.zkServerMap[x.envId] = x.servers
         })
-        console.log('zkServerMap', this.zkServerMap)
-      })
-      this.$nextTick(() => {
-        this.$refs['datasourceDataForm'].clearValidate()
+        console.log('拿到所有环境下的zk列表', this.zkServerMap)
+        // 触发更新对话框
+        this.datasourceDialogStatus = 'update'
+        this.datasourceDialogFormVisible = true
+        this.$nextTick(() => {
+          this.$refs['datasourceDataForm'].clearValidate()
+        })
       })
     },
     // 更新环境

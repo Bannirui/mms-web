@@ -416,7 +416,7 @@ export default {
       })
     },
     handleServiceClick(envId, hostId, serverId) {
-      // 这里你可以触发右侧 echarts 的刷新逻辑
+      // 触发右侧echarts的刷新逻辑
     },
     // 所有的环境的服务
     listServer() {

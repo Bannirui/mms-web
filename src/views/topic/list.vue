@@ -20,7 +20,6 @@
       :fit="false"
       highlight-current-row
       style="width: auto; display: inline-block;"
-      @sort-change="sortChange"
     >
       <el-table-column label="主题名" width="110px" align="center">
         <template slot-scope="{row}">
@@ -34,18 +33,18 @@
       </el-table-column>
       <el-table-column label="申请人" width="110px" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.topicUser }}</span>
+          <span>{{ row.topicUserName }}</span>
         </template>
       </el-table-column>
       <el-table-column label="应用" width="110px" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.topicApp }}</span>
+          <span>{{ row.topicAppName }}</span>
         </template>
       </el-table-column>
       <el-table-column label="环境" min-width="150px" align="center">
         <template slot-scope="{ row }">
           <el-tag
-            v-for="(env, index) in row.envs"
+            v-for="(env, index) in row.topicEnvs"
             :key="index"
             :type="envName2TagType[env.name]"
             size="mini"
@@ -56,22 +55,27 @@
       </el-table-column>
       <el-table-column label="TPS" width="110px" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.tps }}</span>
+          <span>{{ row.topicTps }}</span>
         </template>
       </el-table-column>
       <el-table-column label="消息大小" width="110px" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.msgSz }}</span>
+          <span>{{ row.topicMsgSz }}</span>
         </template>
       </el-table-column>
       <el-table-column label="分区" width="110px" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.partitions }}</span>
+          <span>{{ row.topicPartitions }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="副本" width="110px" align="center">
+        <template slot-scope="{row}">
+          <span>{{ row.topicReplications }}</span>
         </template>
       </el-table-column>
       <el-table-column label="备注信息" align="center" min-width="150px" show-overflow-tooltip>
         <template slot-scope="{row}">
-          <span>{{ row.remark }}</span>
+          <span>{{ row.topicRemark }}</span>
         </template>
       </el-table-column>
       <el-table-column label="Actions" align="center" width="230" class-name="small-padding fixed-width">
@@ -88,31 +92,37 @@
 
     <!--审批topic表单-->
     <el-dialog :title="textMap[approveDialogStatus]" :visible.sync="approveDialogFormVisible">
-      <el-form ref="approveDataForm" :rules="approveRules" :model="temp" label-position="left" label-width="160px" style="width: 400px; margin-left:50px;">
-        <el-form-item label="主题名" prop="name">
-          {{ temp.name }}
+      <el-form ref="approveDataForm" :rules="approveRules" :model="temp" label-position="left" label-width="150px" style="width: 400px; margin-left:50px;">
+        <el-form-item label="主题名" prop="topicName">
+          {{ temp.topicName }}
         </el-form-item>
-        <el-form-item label="申请人" prop="userId">
-          {{ temp.userName }}
+        <el-form-item label="申请人" prop="topicUserName">
+          {{ temp.topicUserName }}
         </el-form-item>
-        <el-form-item label="申请域(appName)" prop="appName">
-          {{ temp.appName }}
+        <el-form-item label="申请域(appName)" prop="topicAppName">
+          {{ temp.topicAppName }}
         </el-form-item>
-        <el-form-item label="MQ类型" prop="brokerType">
-          {{ mqBrokerTypeMap[temp.brokerType] }}
+        <el-form-item label="MQ类型" prop="topicType">
+          {{ mqBrokerTypeMap[temp.topicType] }}
         </el-form-item>
-        <el-form-item label="发送速度" prop="tps">
-          {{ temp.tps }}条/秒
+        <el-form-item label="发送速度" prop="topicTps">
+          {{ temp.topicTps }}条/秒
         </el-form-item>
-        <el-form-item label="消息体大小" prop="msgSz">
-          {{ temp.msgSz }}字节
+        <el-form-item label="消息体大小" prop="topicMsgSz">
+          {{ temp.topicMsgSz }}字节
         </el-form-item>
-        <el-form-item label="Remark" prop="remark">
-          {{ temp.remark }}
+        <el-form-item label="Remark" prop="topicRemark">
+          {{ temp.topicRemark }}
         </el-form-item>
-        <el-form-item label="环境资源分配" prop="env">
+        <el-form-item label="分配分区数" prop="topicPartitions">
+          <el-input-number v-model="temp.topicPartitions" :min="1" :max="1024" />个分区
+        </el-form-item>
+        <el-form-item label="分配副本数" prop="topicReplications">
+          <el-input-number v-model="temp.topicReplications" :min="1" :max="1024" />个副本
+        </el-form-item>
+        <el-form-item label="环境资源分配" prop="topicEnvs">
           <el-tabs v-model="activeEnv">
-            <el-tab-pane v-for="env in temp.envs" :key="env.id" :label="env.name" :name="env.name">
+            <el-tab-pane v-for="env in temp.topicEnvs" :key="env.id" :label="env.name" :name="env.name">
               <!-- 每个环境下的资源选择，用单选按钮组 -->
               <el-radio-group v-model="selectedResources[env.id]">
                 <el-radio
@@ -139,14 +149,14 @@
     <!--申请topic表单-->
     <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
       <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="120px" style="width: 400px; margin-left:50px;">
-        <el-form-item label="主题名" prop="name">
-          <el-input v-model="temp.name" placeholder="主题名" />
+        <el-form-item label="主题名" prop="topicName">
+          <el-input v-model="temp.topicName" placeholder="主题名" />
         </el-form-item>
-        <el-form-item label="申请人" prop="userId">
-          <el-input v-model="temp.userId" readonly disabled />
+        <el-form-item label="申请人" prop="topicUserId">
+          <el-input v-model="temp.topicUserId" disabled />
         </el-form-item>
-        <el-form-item label="申请域(appId)" prop="appId">
-          <el-input v-model.number="temp.appId" placeholder="appId" />
+        <el-form-item label="申请域(appId)" prop="topicAppId">
+          <el-input v-model.number="temp.topicAppId" placeholder="appId" />
         </el-form-item>
         <el-form-item label="环境" prop="checked_env_ids">
           <el-checkbox-group
@@ -158,9 +168,9 @@
             </el-checkbox>
           </el-checkbox-group>
         </el-form-item>
-        <el-form-item label="MQ类型" prop="brokerType">
+        <el-form-item label="MQ类型" prop="topicType">
           <el-radio-group
-            v-model="temp.brokerType"
+            v-model="temp.topicType"
             text-color="#626aef"
             fill="#6cf"
           >
@@ -173,14 +183,14 @@
             </el-radio-button>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="发送速度" prop="tps">
-          <el-input-number v-model="temp.tps" :min="1" :max="1024" />条/秒
+        <el-form-item label="发送速度" prop="topicTps">
+          <el-input-number v-model="temp.topicTps" :min="1" :max="1024" />条/秒
         </el-form-item>
-        <el-form-item label="消息体大小" prop="msgSz">
-          <el-input-number v-model="temp.msgSz" :min="1" :max="1024" />字节
+        <el-form-item label="消息体大小" prop="topicMsgSz">
+          <el-input-number v-model="temp.topicMsgSz" :min="1" :max="1024" />字节
         </el-form-item>
-        <el-form-item label="remark" prop="remark">
-          <el-input v-model="temp.remark" :autosize="{ minRows: 2, maxRows: 4}" type="textarea" placeholder="Please input" />
+        <el-form-item label="remark" prop="topicRemark">
+          <el-input v-model="temp.topicRemark" :autosize="{ minRows: 2, maxRows: 4}" type="textarea" placeholder="Please input" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -196,11 +206,10 @@
 </template>
 
 <script>
-import { fetchList, createTopic } from '@/api/topic'
+import { fetchList, createTopic, approveTopic } from '@/api/topic'
 import { allEnableEnv } from '@/api/env'
 import { getServer8Type } from '@/api/server' // secondary package based on el-pagination
 import waves from '@/directive/waves' // waves directive
-import { parseTime } from '@/utils'
 import Pagination from '@/components/Pagination'
 
 export default {
@@ -239,7 +248,7 @@ export default {
       tableKey: 0,
       /**
        * 后端接口查询回来的列表
-       *   [{topicId,topicName,topicType,topicStatus,topicTps,topicMsgSz,topicPartitions,topicReplication,topicRemark,userId,userName,appId,appName,
+       *   [{topicId,topicName,topicType,topicStatus,topicTps,topicMsgSz,topicPartitions,topicReplications,topicRemark,userId,topicUserName,appId,topicAppName,
        *   envs: [{envId,envName}]
        *   }]
        */
@@ -254,30 +263,35 @@ export default {
         // 查询条件 topic
         topicName: '',
         // 查询条件 用户id
-        userId: null
+        userId: this.$store.state.user.id
       },
       sortOptions: [{ label: 'ID Ascending', key: '+id' }, { label: 'ID Descending', key: '-id' }],
       showReviewer: false,
       // 绑定表单 新增和更新时候用
       temp: {
-        id: undefined,
-        // 谁申请的
-        userId: undefined,
-        userName: '',
+        // topicId
+        topicId: undefined,
         // topic name
-        name: '',
+        topicName: '',
+        // 谁申请的
+        topicUserId: undefined,
+        topicUserName: '',
         // 申请给哪个业务
-        appId: undefined,
-        appName: '',
+        topicAppId: undefined,
+        topicAppName: '',
         // mq类型 number
-        brokerType: undefined,
-        tps: undefined,
-        msgSz: undefined,
-        remark: '',
+        topicType: undefined,
+        topicTps: undefined,
+        topicMsgSz: undefined,
+        topicRemark: '',
         // 选中的环境 num 为什么要放在temp里面 因为表单校验规则rule不允许独立
         checked_env_ids: [],
         // [{id, name}]
-        envs: []
+        topicEnvs: [],
+        // 审批topic是分配的分区数
+        topicPartitions: undefined,
+        // 审批topic是分配的副本数
+        topicReplications: undefined
       },
       // 所有enable的环境 {id, name, sortId, status}
       all_envs: [],
@@ -293,8 +307,8 @@ export default {
       },
       // 提交申请表单字段的校验规则
       rules: {
-        name: [{ required: true, message: 'topic名称必填', trigger: 'blur' }],
-        appId: [{ type: 'number', required: true, message: 'app应用必填数字', trigger: 'blur' }],
+        topicName: [{ required: true, message: 'topic名称必填', trigger: 'blur' }],
+        topicApp: [{ type: 'number', required: true, message: 'app应用必填数字', trigger: 'blur' }],
         checked_env_ids: [{
           validator: (rule, value, callback) => {
             if (!value || value.length === 0) {
@@ -312,22 +326,6 @@ export default {
       },
       // 审批topic
       approveRules: {
-        name: [{ required: true, message: 'topic名称必填', trigger: 'blur' }],
-        appId: [{ type: 'number', required: true, message: 'app应用必填数字', trigger: 'blur' }],
-        checked_env_ids: [{
-          validator: (rule, value, callback) => {
-            if (!value || value.length === 0) {
-              callback(new Error('环境必选'))
-            } else {
-              callback()
-            }
-          },
-          trigger: 'change'
-        }],
-        brokerType: [{ required: true, message: 'MQ集群类型必选', trigger: 'change' }],
-        tps: [{ type: 'number', required: true, message: 'MQ的TPS必填', trigger: 'blur' }],
-        msgSz: [{ type: 'number', required: true, message: '消息体大小必填', trigger: 'blur' }],
-        remark: [{ required: true, message: 'remark必填', trigger: 'blur' }]
       },
       downloadLoading: false,
       // 申请topic时下拉选择
@@ -352,13 +350,6 @@ export default {
     this.getAllEnv()
   },
   methods: {
-    approveTopic(row) {
-      this.$message({
-        message: '操作Success',
-        type: 'success'
-      })
-      row.status = status
-    },
     // 分页拿到列表
     getList() {
       this.listLoading = true
@@ -370,14 +361,14 @@ export default {
             topicName: item.topicName,
             topicType: item.topicType,
             topicStatus: item.topicStatus,
-            tps: item.topicTps,
-            msgSz: item.topicMsgSz,
-            partitions: item.topicPartitions,
-            replication: item.topicReplication,
-            remark: item.topicRemark,
-            topicUser: item.userName,
-            topicApp: item.appName,
-            envs: item.envs.map(env => { return { id: env.envId, name: env.envName } })
+            topicTps: item.topicTps,
+            topicMsgSz: item.topicMsgSz,
+            topicPartitions: item.topicPartitions,
+            topicReplications: item.topicReplication,
+            topicRemark: item.topicRemark,
+            topicUserName: item.userName,
+            topicAppName: item.appName,
+            topicEnvs: item.envs.map(env => { return { id: env.envId, name: env.envName } })
           })
         )
 
@@ -397,38 +388,17 @@ export default {
       this.listQuery.page = 1
       this.getList()
     },
-    handleModifyStatus(row, status) {
-      this.$message({
-        message: '操作Success',
-        type: 'success'
-      })
-      row.status = status
-    },
-    sortChange(data) {
-      const { prop, order } = data
-      if (prop === 'id') {
-        this.sortByID(order)
-      }
-    },
-    sortByID(order) {
-      if (order === 'ascending') {
-        this.listQuery.sort = '+id'
-      } else {
-        this.listQuery.sort = '-id'
-      }
-      this.handleFilter()
-    },
     resetTemp() {
       this.temp = {
-        id: undefined,
+        topicId: undefined,
+        topicName: '',
         // 当前登陆用户
-        userId: this.$store.state.user.id,
-        name: '',
-        appId: undefined,
-        brokerType: undefined,
-        tps: 1024,
-        msgSz: 1024,
-        remark: '',
+        topicUserId: this.$store.state.user.id,
+        topicAppId: undefined,
+        topicType: undefined,
+        topicTps: 1024,
+        topicMsgSz: 1024,
+        topicRemark: '',
         // 申请topic时要填申请哪些环境
         checked_env_ids: []
       }
@@ -445,18 +415,23 @@ export default {
     },
     // 审批topic
     handleApprove(row) {
-      this.resetTemp()
       this.temp = {
-        id: row.topicId,
-        userName: row.topicUser,
-        appName: row.topicApp,
-        name: row.topicName,
-        brokerType: row.topicType,
-        tps: row.tps,
-        msgSz: row.msgSz,
-        remark: row.remark,
+        topicId: row.topicId,
+        topicUserId: row.topicUserId,
+        topicUserName: row.topicUserName,
+        topicAppId: row.topicAppId,
+        topicAppName: row.topicAppName,
+        topicName: row.topicName,
+        topicType: row.topicType,
+        topicTps: row.topicTps,
+        topicMsgSz: row.topicMsgSz,
+        topicRemark: row.topicRemark,
+        // 分配的默认分区数
+        topicPartitions: 5,
+        // 分配的默认副本数
+        topicReplications: 1,
         // 等会要在表单中根据环境展示tab
-        envs: row.envs
+        topicEnvs: row.topicEnvs
       }
       this.approveDialogStatus = 'create'
       this.approveDialogFormVisible = true
@@ -480,31 +455,34 @@ export default {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
           // 创建topic
-          createTopic({
-            userId: this.temp.userId,
-            name: this.temp.name,
-            appId: this.temp.appId,
-            tps: this.temp.tps,
-            msgSz: this.temp.msgSz,
-            clusterType: this.temp.brokerType,
+          const data = {
+            userId: this.temp.topicUserId,
+            name: this.temp.topicName,
+            appId: this.temp.topicAppId,
+            tps: this.temp.topicTps,
+            msgSz: this.temp.topicMsgSz,
+            clusterType: this.temp.topicType,
             envs: this.temp.checked_env_ids.map(x => ({ envId: x })),
-            remark: this.temp.remark
-          }).then((resp) => {
+            remark: this.temp.topicRemark
+          }
+          console.log('申请topic的请求是', data)
+          createTopic(data).then((resp) => {
             // 接口返回的topic id渲染到页面
             const envs = this.all_envs
               .filter(env => this.temp.checked_env_ids.includes(env.id))
               .map(env => { return { id: env.id, name: env.name } })
+            console.log('新建topic的resp', resp.data)
             const newRow = {
-              id: resp.data,
-              topicName: this.temp.name,
+              topicId: resp.data,
+              topicName: this.temp.topicName,
               topicStatus: 1,
-              topicUser: this.temp.userId,
-              topicApp: this.temp.appId,
-              tps: this.temp.tps,
-              msgSz: this.temp.msgSz,
-              remark: this.temp.remark,
+              topicUserId: this.temp.topicUserId,
+              topicAppId: this.temp.topicAppId,
+              topicTps: this.temp.topicTps,
+              topicMsgSz: this.temp.topicMsgSz,
+              topicRemark: this.temp.topicRemark,
               // [{id, name}]
-              envs: envs
+              topicEnvs: envs
             }
             this.list.unshift(newRow)
             this.dialogFormVisible = false
@@ -522,10 +500,22 @@ export default {
     approveTopicData() {
       this.$refs['approveDataForm'].validate((valid) => {
         if (valid) {
-          console.log('审核topic', this.selectedResources)
-          // 创建topic
-          createTopic({
+          console.log('审核topic环境资源分配', this.selectedResources)
+          // 请求接口
+          const list = Object.entries(this.selectedResources).map(([key, value]) => ({
+            envId: Number(key),
+            serverId: value
+          }))
+          console.log('环境资源分配转换为list', list)
+          console.log('审批topic的temp是', this.temp)
+          approveTopic(this.temp.topicId, {
+            partitions: this.temp.topicPartitions,
+            replication: this.temp.topicReplications,
+            envServers: list
           }).then(() => {
+            const index = this.list.findIndex(v => v.topicId === this.temp.topicId)
+            this.list.splice(index, 1, this.temp)
+            this.approveDialogFormVisible = false
             this.$notify({
               title: 'Success',
               message: 'Created Successfully',
@@ -535,76 +525,6 @@ export default {
           })
         }
       })
-    },
-    handleUpdate(row) {
-      this.temp = Object.assign({}, row) // copy obj
-      this.temp.timestamp = new Date(this.temp.timestamp)
-      this.dialogStatus = 'update'
-      this.dialogFormVisible = true
-      this.$nextTick(() => {
-        this.$refs['dataForm'].clearValidate()
-      })
-    },
-    updateData() {
-      this.$refs['dataForm'].validate((valid) => {
-        if (valid) {
-          const tempData = Object.assign({}, this.temp)
-          tempData.timestamp = +new Date(tempData.timestamp) // change Thu Nov 30 2017 16:41:05 GMT+0800 (CST) to 1512031311464
-          updateArticle(tempData).then(() => {
-            const index = this.list.findIndex(v => v.id === this.temp.id)
-            this.list.splice(index, 1, this.temp)
-            this.dialogFormVisible = false
-            this.$notify({
-              title: 'Success',
-              message: 'Update Successfully',
-              type: 'success',
-              duration: 2000
-            })
-          })
-        }
-      })
-    },
-    handleDelete(row, index) {
-      this.$notify({
-        title: 'Success',
-        message: 'Delete Successfully',
-        type: 'success',
-        duration: 2000
-      })
-      this.list.splice(index, 1)
-    },
-    handleFetchPv(pv) {
-      fetchPv(pv).then(response => {
-        this.pvData = response.data.pvData
-        this.dialogPvVisible = true
-      })
-    },
-    handleDownload() {
-      this.downloadLoading = true
-      import('@/vendor/Export2Excel').then(excel => {
-        const tHeader = ['timestamp', 'title', 'type', 'importance', 'status']
-        const filterVal = ['timestamp', 'title', 'type', 'importance', 'status']
-        const data = this.formatJson(filterVal)
-        excel.export_json_to_excel({
-          header: tHeader,
-          data,
-          filename: 'table-list'
-        })
-        this.downloadLoading = false
-      })
-    },
-    formatJson(filterVal) {
-      return this.list.map(v => filterVal.map(j => {
-        if (j === 'timestamp') {
-          return parseTime(v[j])
-        } else {
-          return v[j]
-        }
-      }))
-    },
-    getSortClass: function(key) {
-      const sort = this.listQuery.sort
-      return sort === `+${key}` ? 'ascending' : 'descending'
     },
     // 点选checkbox后被选择的
     handleCheckedEnvChange: function(checkedVals) {
