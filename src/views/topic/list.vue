@@ -152,11 +152,18 @@
         <el-form-item label="主题名" prop="topicName">
           <el-input v-model="temp.topicName" placeholder="主题名" />
         </el-form-item>
-        <el-form-item label="申请人" prop="topicUserId">
-          <el-input v-model="temp.topicUserId" disabled />
+        <el-form-item label="申请人" prop="topicUserName">
+          <el-input v-model="temp.topicUserName" disabled />
         </el-form-item>
-        <el-form-item label="申请域(appId)" prop="topicAppId">
-          <el-input v-model.number="temp.topicAppId" placeholder="appId" />
+        <el-form-item label="关联App" prop="topicAppId">
+          <el-select v-model="temp.topicAppId" filterable placeholder="请选择App名称">
+            <el-option
+              v-for="item in appNames"
+              :key="item.appId"
+              :label="item.appName"
+              :value="item.appId">
+            </el-option>
+          </el-select>
         </el-form-item>
         <el-form-item label="环境" prop="checked_env_ids">
           <el-checkbox-group
@@ -211,6 +218,7 @@ import { allEnableEnv } from '@/api/env'
 import { getServer8Type } from '@/api/server' // secondary package based on el-pagination
 import waves from '@/directive/waves' // waves directive
 import Pagination from '@/components/Pagination'
+import createListFromArray from "echarts/src/chart/helper/createListFromArray";
 
 export default {
   name: 'TopicList',
@@ -228,6 +236,8 @@ export default {
   },
   data() {
     return {
+      // app的信息{appId, appName}
+      appNames: [],
       activeEnv: '开发', // 绑定el-tabs的v-model
       // 每个环境下可供选择的mq资源 {环境id: [{hostId, hostName, hostHost, serverId, serverName, serverPort}]}
       envResources: {},
@@ -308,7 +318,7 @@ export default {
       // 提交申请表单字段的校验规则
       rules: {
         topicName: [{ required: true, message: 'topic名称必填', trigger: 'blur' }],
-        topicApp: [{ type: 'number', required: true, message: 'app应用必填数字', trigger: 'blur' }],
+        topicAppId: [{ type: 'number', required: true, message: 'app应用必选', trigger: 'change' }],
         checked_env_ids: [{
           validator: (rule, value, callback) => {
             if (!value || value.length === 0) {
@@ -319,10 +329,10 @@ export default {
           },
           trigger: 'change'
         }],
-        brokerType: [{ required: true, message: 'MQ集群类型必选', trigger: 'change' }],
-        tps: [{ type: 'number', required: true, message: 'MQ的TPS必填', trigger: 'blur' }],
-        msgSz: [{ type: 'number', required: true, message: '消息体大小必填', trigger: 'blur' }],
-        remark: [{ required: true, message: 'remark必填', trigger: 'blur' }]
+        topicType: [{ required: true, message: 'MQ集群类型必选', trigger: 'change' }],
+        topicTps: [{ type: 'number', required: true, message: 'MQ的TPS必填', trigger: 'blur' }],
+        topicMsgSz: [{ type: 'number', required: true, message: '消息体大小必填', trigger: 'blur' }],
+        topicRemark: [{ required: true, message: 'remark必填', trigger: 'blur' }]
       },
       // 审批topic
       approveRules: {
@@ -346,10 +356,16 @@ export default {
   created() {
     // 所有topic
     this.getList()
-    // 有的环境
+    // 所有的环境
     this.getAllEnv()
+    // 所有的app信息
+    this.listAppByName()
   },
   methods: {
+    listAppByName() {
+      // todo 查询所有的app信息
+      this.appNames = [{ appId: 1, appName: 'my-test' }, { appId: 2, appName: 'mms' }, { appId: 3, appName: 'hellot' }]
+    },
     // 分页拿到列表
     getList() {
       this.listLoading = true
@@ -394,6 +410,7 @@ export default {
         topicName: '',
         // 当前登陆用户
         topicUserId: this.$store.state.user.id,
+        topicUserName: this.$store.state.user.name,
         topicAppId: undefined,
         topicType: undefined,
         topicTps: 1024,
