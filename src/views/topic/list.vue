@@ -2,7 +2,7 @@
   <div class="app-container">
     <div class="filter-container">
       <el-input v-model="listQuery.topicName" placeholder="Topic名称" style="width: 200px;" class="filter-item" @keyup.enter.native="handleFilter" />
-      <el-input v-model="listQuery.userId" placeholder="申请人" style="width: 200px;" class="filter-item" @keyup.enter.native="handleFilter" />
+      <el-input v-model="listQuery.userName" placeholder="申请人" style="width: 200px;" class="filter-item" @keyup.enter.native="handleFilter4UserName" />
       <el-button v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
         查询
       </el-button>
@@ -90,6 +90,80 @@
 
     <pagination v-show="total>0" :total="total" :page.sync="listQuery.page" :limit.sync="listQuery.size" @pagination="getList" />
 
+    <!--申请topic表单-->
+    <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
+      <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="120px" style="width: 400px; margin-left:50px;">
+        <el-form-item label="主题名" prop="topicName">
+          <el-input v-model="temp.topicName" placeholder="主题名" />
+        </el-form-item>
+        <el-form-item label="申请人" prop="topicUserName">
+          <el-input v-model="temp.topicUserName" disabled />
+        </el-form-item>
+        <el-form-item label="关联App" prop="topicAppId">
+          <el-select
+            v-model="temp.topicAppId"
+            filterable
+            remote
+            clearable
+            reserve-keyword
+            placeholder="输入APP名称搜索"
+            :remote-method="searchApp"
+            :loading="listLoading"
+            style="width: 100%"
+            @change="handleSelectAppChange"
+          >
+            <el-option
+              v-for="item in appOptions"
+              :key="item.appId"
+              :label="item.appName"
+              :value="item.appId"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="环境" prop="checked_env_ids">
+          <el-checkbox-group
+            v-model="temp.checked_env_ids"
+            @change="handleCheckedEnvChange"
+          >
+            <el-checkbox v-for="(env, index) in all_envs" :key="index" :label="env.id">
+              {{ env.name }}
+            </el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
+        <el-form-item label="MQ类型" prop="topicType">
+          <el-radio-group
+            v-model="temp.topicType"
+            text-color="#626aef"
+            fill="#6cf"
+          >
+            <el-radio-button
+              v-for="(v, k) in mqBrokerTypeMap"
+              :key="k"
+              :label="k"
+            >
+              {{ v }}
+            </el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="发送速度" prop="topicTps">
+          <el-input-number v-model="temp.topicTps" :min="1" :max="1024" />条/秒
+        </el-form-item>
+        <el-form-item label="消息体大小" prop="topicMsgSz">
+          <el-input-number v-model="temp.topicMsgSz" :min="1" :max="1024" />字节
+        </el-form-item>
+        <el-form-item label="remark" prop="topicRemark">
+          <el-input v-model="temp.topicRemark" :autosize="{ minRows: 2, maxRows: 4}" type="textarea" placeholder="Please input" />
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="dialogFormVisible = false">
+          Cancel
+        </el-button>
+        <el-button type="primary" @click="dialogStatus==='create'?createData():updateData()">
+          Confirm
+        </el-button>
+      </div>
+    </el-dialog>
     <!--审批topic表单-->
     <el-dialog :title="textMap[approveDialogStatus]" :visible.sync="approveDialogFormVisible">
       <el-form ref="approveDataForm" :rules="approveRules" :model="temp" label-position="left" label-width="150px" style="width: 400px; margin-left:50px;">
@@ -146,69 +220,6 @@
         </el-button>
       </div>
     </el-dialog>
-    <!--申请topic表单-->
-    <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
-      <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="120px" style="width: 400px; margin-left:50px;">
-        <el-form-item label="主题名" prop="topicName">
-          <el-input v-model="temp.topicName" placeholder="主题名" />
-        </el-form-item>
-        <el-form-item label="申请人" prop="topicUserName">
-          <el-input v-model="temp.topicUserName" disabled />
-        </el-form-item>
-        <el-form-item label="关联App" prop="topicAppId">
-          <el-select v-model="temp.topicAppId" filterable placeholder="请选择App名称">
-            <el-option
-              v-for="item in appNames"
-              :key="item.appId"
-              :label="item.appName"
-              :value="item.appId">
-            </el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="环境" prop="checked_env_ids">
-          <el-checkbox-group
-            v-model="temp.checked_env_ids"
-            @change="handleCheckedEnvChange"
-          >
-            <el-checkbox v-for="(env, index) in all_envs" :key="index" :label="env.id">
-              {{ env.name }}
-            </el-checkbox>
-          </el-checkbox-group>
-        </el-form-item>
-        <el-form-item label="MQ类型" prop="topicType">
-          <el-radio-group
-            v-model="temp.topicType"
-            text-color="#626aef"
-            fill="#6cf"
-          >
-            <el-radio-button
-              v-for="(v, k) in mqBrokerTypeMap"
-              :key="k"
-              :label="k"
-            >
-              {{ v }}
-            </el-radio-button>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="发送速度" prop="topicTps">
-          <el-input-number v-model="temp.topicTps" :min="1" :max="1024" />条/秒
-        </el-form-item>
-        <el-form-item label="消息体大小" prop="topicMsgSz">
-          <el-input-number v-model="temp.topicMsgSz" :min="1" :max="1024" />字节
-        </el-form-item>
-        <el-form-item label="remark" prop="topicRemark">
-          <el-input v-model="temp.topicRemark" :autosize="{ minRows: 2, maxRows: 4}" type="textarea" placeholder="Please input" />
-        </el-form-item>
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button @click="dialogFormVisible = false">
-          Cancel
-        </el-button>
-        <el-button type="primary" @click="dialogStatus==='create'?createData():updateData()">
-          Confirm
-        </el-button>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
@@ -218,7 +229,6 @@ import { allEnableEnv } from '@/api/env'
 import { getServer8Type } from '@/api/server' // secondary package based on el-pagination
 import waves from '@/directive/waves' // waves directive
 import Pagination from '@/components/Pagination'
-import createListFromArray from "echarts/src/chart/helper/createListFromArray";
 
 export default {
   name: 'TopicList',
@@ -236,8 +246,6 @@ export default {
   },
   data() {
     return {
-      // app的信息{appId, appName}
-      appNames: [],
       activeEnv: '开发', // 绑定el-tabs的v-model
       // 每个环境下可供选择的mq资源 {环境id: [{hostId, hostName, hostHost, serverId, serverName, serverPort}]}
       envResources: {},
@@ -273,7 +281,8 @@ export default {
         // 查询条件 topic
         topicName: '',
         // 查询条件 用户id
-        userId: this.$store.state.user.id
+        userId: this.$store.state.user.id,
+        userName: this.$store.state.user.name
       },
       sortOptions: [{ label: 'ID Ascending', key: '+id' }, { label: 'ID Descending', key: '-id' }],
       showReviewer: false,
@@ -350,7 +359,9 @@ export default {
         2: '已审批',
         4: '待审批',
         8: '已审批'
-      }
+      },
+      // 模糊搜索 app的信息{appId, appName}
+      appOptions: []
     }
   },
   created() {
@@ -358,13 +369,31 @@ export default {
     this.getList()
     // 所有的环境
     this.getAllEnv()
-    // 所有的app信息
-    this.listAppByName()
   },
   methods: {
-    listAppByName() {
-      // todo 查询所有的app信息
-      this.appNames = [{ appId: 1, appName: 'my-test' }, { appId: 2, appName: 'mms' }, { appId: 3, appName: 'hellot' }]
+    // 选中app保存app的信息
+    handleSelectAppChange(val) {
+      const selected = this.appOptions.find(item => item.appId === val)
+      if (selected) {
+        this.temp.topicAppId = selected.appId
+        this.temp.topicAppName = selected.appName
+      }
+    },
+    // app name模糊搜索
+    async searchApp(query) {
+      if (!query) {
+        this.topicOptions = []
+        return
+      }
+      this.listLoading = true
+      try {
+        // todo 查询接口
+        this.appOptions = [{ appId: 1, appName: 'my-test' }, { appId: 2, appName: 'mms' }, { appId: 3, appName: 'hellot' }]
+      } catch (e) {
+        console.error('搜索APP失败', e)
+      } finally {
+        this.listLoading = false
+      }
     },
     // 分页拿到列表
     getList() {
@@ -402,6 +431,13 @@ export default {
     },
     handleFilter() {
       this.listQuery.page = 1
+      this.getList()
+    },
+    // 映射姓名->id
+    handleFilter4UserName() {
+      this.listQuery.page = 1
+      // todo 根据userName赋值userId
+      this.listQuery.userId = null
       this.getList()
     },
     resetTemp() {
@@ -494,7 +530,9 @@ export default {
               topicName: this.temp.topicName,
               topicStatus: 1,
               topicUserId: this.temp.topicUserId,
+              topicUserName: this.temp.topicUserName,
               topicAppId: this.temp.topicAppId,
+              topicAppName: this.temp.topicAppName,
               topicTps: this.temp.topicTps,
               topicMsgSz: this.temp.topicMsgSz,
               topicRemark: this.temp.topicRemark,

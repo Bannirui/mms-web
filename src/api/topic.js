@@ -56,3 +56,15 @@ export function createTopic(data) {
 export function approveTopic(topicId, data) {
   return putData(`/api/topic/${topicId}/approve`, data)
 }
+
+/**
+ * 关键字模糊搜索
+ * @param topicName 名称
+ * @returns [{topicId,topicName}]
+ */
+export function searchTopic(topicName) {
+  const params = new URLSearchParams()
+  // 只有非空字符串才加
+  if (topicName) params.append('topicName', topicName)
+  return getData(`/api/topic/searchTopic?${params.toString()}`)
+}

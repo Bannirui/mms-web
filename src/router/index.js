@@ -8,6 +8,7 @@ import Layout from '@/layout'
 
 /* Router Modules */
 import topicRouter from './modules/topic'
+import consumerRouter from './modules/consumer'
 import envRouter from './modules/env'
 // 权限
 import permissionRouter from './modules/permisson'
@@ -87,6 +88,7 @@ export const asyncRoutes = [
   envRouter,
   // topic的路由
   topicRouter,
+  consumerRouter,
   // 权限
   permissionRouter,
   // 404 page must be placed at the end !!!
