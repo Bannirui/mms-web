@@ -28,7 +28,7 @@
       </el-table-column>
       <el-table-column label="状态" width="110px" align="center">
         <template slot-scope="{row}">
-          <span>{{ topicStatusMap[row.topicStatus] }}</span>
+          <span>{{ resourceStatusMap[row.topicStatus] }}</span>
         </template>
       </el-table-column>
       <el-table-column label="申请人" width="110px" align="center">
@@ -167,25 +167,25 @@
     <!--审批topic表单-->
     <el-dialog :title="textMap[approveDialogStatus]" :visible.sync="approveDialogFormVisible">
       <el-form ref="approveDataForm" :rules="approveRules" :model="temp" label-position="left" label-width="150px" style="width: 400px; margin-left:50px;">
-        <el-form-item label="主题名" prop="topicName">
+        <el-form-item label="主题名">
           {{ temp.topicName }}
         </el-form-item>
-        <el-form-item label="申请人" prop="topicUserName">
+        <el-form-item label="申请人">
           {{ temp.topicUserName }}
         </el-form-item>
-        <el-form-item label="申请域(appName)" prop="topicAppName">
+        <el-form-item label="申请域(appName)">
           {{ temp.topicAppName }}
         </el-form-item>
-        <el-form-item label="MQ类型" prop="topicType">
+        <el-form-item label="MQ类型">
           {{ mqBrokerTypeMap[temp.topicType] }}
         </el-form-item>
-        <el-form-item label="发送速度" prop="topicTps">
+        <el-form-item label="发送速度">
           {{ temp.topicTps }}条/秒
         </el-form-item>
-        <el-form-item label="消息体大小" prop="topicMsgSz">
+        <el-form-item label="消息体大小">
           {{ temp.topicMsgSz }}字节
         </el-form-item>
-        <el-form-item label="Remark" prop="topicRemark">
+        <el-form-item label="Remark">
           {{ temp.topicRemark }}
         </el-form-item>
         <el-form-item label="分配分区数" prop="topicPartitions">
@@ -227,6 +227,7 @@
 import { fetchList, createTopic, approveTopic } from '@/api/topic'
 import { allEnableEnv } from '@/api/env'
 import { getServer8Type } from '@/api/server' // secondary package based on el-pagination
+import { mqBrokerTypeMap, resourceStatusMap } from '@/const/biz'
 import waves from '@/directive/waves' // waves directive
 import Pagination from '@/components/Pagination'
 
@@ -246,6 +247,8 @@ export default {
   },
   data() {
     return {
+      mqBrokerTypeMap,
+      resourceStatusMap,
       activeEnv: '开发', // 绑定el-tabs的v-model
       // 每个环境下可供选择的mq资源 {环境id: [{hostId, hostName, hostHost, serverId, serverName, serverPort}]}
       envResources: {},
@@ -347,19 +350,6 @@ export default {
       approveRules: {
       },
       downloadLoading: false,
-      // 申请topic时下拉选择
-      mqBrokerTypeMap: {
-        1: 'Kafka',
-        2: 'Rocket'
-      },
-      // topic状态映射
-      topicStatusMap: {
-        0: '删除',
-        1: '待审批',
-        2: '已审批',
-        4: '待审批',
-        8: '已审批'
-      },
       // 模糊搜索 app的信息{appId, appName}
       appOptions: []
     }

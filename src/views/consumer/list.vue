@@ -33,7 +33,7 @@
       </el-table-column>
       <el-table-column label="状态" width="110px" align="center">
         <template slot-scope="{row}">
-          <span>{{ consumerStatusMap[row.consumerStatus] }}</span>
+          <span>{{ resourceStatusMap[row.consumerStatus] }}</span>
         </template>
       </el-table-column>
       <el-table-column label="申请人" width="110px" align="center">
@@ -164,16 +164,28 @@
     <!--审批表单-->
     <el-dialog :title="textMap[approveConsumerDialogStatus]" :visible.sync="approveConsumerDialogFormVisible">
       <el-form ref="approveConsumerDataForm" :rules="approveConsumerRules" :model="temp" label-position="left" label-width="150px" style="width: 400px; margin-left:50px;">
-        <el-form-item label="主题名" prop="consumerName">
+        <el-form-item label="消费组">
           {{ temp.consumerName }}
         </el-form-item>
-        <el-form-item label="申请人" prop="consumerUserName">
+        <el-form-item label="主题名">
+          {{ temp.topicName }}
+        </el-form-item>
+        <el-form-item label="主题类型">
+          {{ mqBrokerTypeMap[temp.topicType] }}
+        </el-form-item>
+        <el-form-item label="是否支持广播消费">
+          {{ temp.consumerBroadcast?'是':'不是' }}
+        </el-form-item>
+        <el-form-item label="是否支持最早消费">
+          {{ temp.consumerFromMin?'是':'不是' }}
+        </el-form-item>
+        <el-form-item label="申请人">
           {{ temp.consumerUserName }}
         </el-form-item>
-        <el-form-item label="申请域(appName)" prop="consumerAppName">
+        <el-form-item label="关联的APP">
           {{ temp.consumerAppName }}
         </el-form-item>
-        <el-form-item label="Remark" prop="consumerRemark">
+        <el-form-item label="Remark">
           {{ temp.consumerRemark }}
         </el-form-item>
       </el-form>
@@ -191,14 +203,20 @@
 
 <script>
 import { searchTopic } from '@/api/topic'
-import { createConsumer, pageList } from '@/api/consumer'
+import { createConsumer, pageList, approveConsumer } from '@/api/consumer'
 import { allEnableEnv } from '@/api/env'
 import { getServer8Type } from '@/api/server' // secondary package based on el-pagination
+import {mqBrokerTypeMap, resourceStatusMap} from '@/const/biz'
 import waves from '@/directive/waves' // waves directive
 import Pagination from '@/components/Pagination'
 
 export default {
   name: 'ConsumerList',
+  computed: {
+    resourceStatusMap() {
+      return resourceStatusMap
+    }
+  },
   components: { Pagination },
   directives: { waves },
   filters: {
@@ -213,6 +231,7 @@ export default {
   },
   data() {
     return {
+      mqBrokerTypeMap,
       // 申请consumer模糊搜索选择对应topic {topicId,topicName,topicType}
       topicOptions: [],
       // 申请consumer时模糊搜索 app的信息{appId, appName}
@@ -239,7 +258,7 @@ export default {
        * 后端接口查询回来的列表
        *   [{consumerId,consumerName,consumerStatus,consumerRemark,consumerUserId,consumerUserName,consumerAppId,consumerAppName,consumerRemark,
        *   consumerBroadcast,consumerFromMin
-       *   topicId,topicName,
+       *   topicId,topicName,topicType
        *   consumerEnvs: [{envId,envName}]
        *   }]
        */
@@ -294,15 +313,7 @@ export default {
         create: 'Create'
       },
       createConsumerRules: { },
-      approveConsumerRules: { },
-      // 状态映射
-      consumerStatusMap: {
-        0: '删除',
-        1: '待审批',
-        2: '已审批',
-        4: '待审批',
-        8: '已审批'
-      }
+      approveConsumerRules: { }
     }
   },
   created() {
@@ -375,6 +386,7 @@ export default {
             consumerName: item.consumerName,
             topicId: item.topicId,
             topicName: item.topicName,
+            topicType: item.topicType,
             consumerStatus: item.consumerStatus,
             consumerRemark: item.consumerRemark,
             consumerUserId: item.consumerUserId,
@@ -489,10 +501,14 @@ export default {
         consumerUserId: row.consumerUserId,
         consumerUserName: row.consumerUserName,
         consumerAppId: row.consumerAppId,
-        topicAppName: row.consumerAppName,
+        consumerAppName: row.consumerAppName,
         consumerRemark: row.consumerRemark,
-        // 等会要在表单中根据环境展示tab
-        topicEnvs: row.topicEnvs
+        consumerBroadcast: row.consumerBroadcast,
+        consumerFromMin: row.consumerFromMin,
+        consumerEnvs: row.consumerEnvs,
+        topicId: row.topicId,
+        topicName: row.topicName,
+        topicType: row.topicType
       }
       this.approveConsumerDialogStatus = 'create'
       this.approveConsumerDialogFormVisible = true
@@ -514,18 +530,12 @@ export default {
       this.$refs['approveConsumerDataForm'].validate((valid) => {
         if (valid) {
           // 请求接口
-          const list = Object.entries(this.selectedResources).map(([key, value]) => ({
-            envId: Number(key),
-            serverId: value
-          }))
-          approveTopic(this.temp.topicId, {
-            partitions: this.temp.topicPartitions,
-            replication: this.temp.topicReplications,
-            envServers: list
-          }).then(() => {
-            const index = this.list.findIndex(v => v.topicId === this.temp.topicId)
-            this.list.splice(index, 1, this.temp)
-            this.approveDialogFormVisible = false
+          approveConsumer(this.temp.consumerId).then(() => {
+            this.temp.consumerStatus = 2
+            const index = this.allConsumers.findIndex(v => v.consumerId === this.temp.consumerId)
+            this.allConsumers.splice(index, 1, this.temp)
+            console.log('申批完consumer temp是', this.temp, '列表是', this.allConsumers)
+            this.approveConsumerDialogFormVisible = false
             this.$notify({
               title: 'Success',
               message: 'Created Successfully',
@@ -535,10 +545,6 @@ export default {
           })
         }
       })
-    },
-    // 点选checkbox后被选择的
-    handleCheckedEnvChange: function(checkedVals) {
-      // todo
     }
   }
 }
