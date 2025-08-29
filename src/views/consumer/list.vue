@@ -63,6 +63,16 @@
           <span>{{ row.consumerRemark }}</span>
         </template>
       </el-table-column>
+      <el-table-column label="是否支持广播消费" align="center" min-width="150px" show-overflow-tooltip>
+        <template slot-scope="{row}">
+          <span>{{ row.consumerBroadcast?"支持":"不支持" }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="是否支持最早消费" align="center" min-width="150px" show-overflow-tooltip>
+        <template slot-scope="{row}">
+          <span>{{ row.consumerFromMin?"支持":"不支持" }}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="Actions" align="center" width="230" class-name="small-padding fixed-width">
         <template slot-scope="{row}">
           <!--todo 加权限判断-->
@@ -101,6 +111,18 @@
               :value="item.topicId"
             />
           </el-select>
+        </el-form-item>
+        <el-form-item v-show="temp.topicType === 2" label="广播消费" prop="consumerBroadcast">
+          <el-radio-group v-model="temp.consumerBroadcast">
+            <el-radio :label="true">是</el-radio>
+            <el-radio :label="false">否</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-show="temp.topicType === 2" label="最早消费" prop="consumerFromMin">
+          <el-radio-group v-model="temp.consumerFromMin">
+            <el-radio label="true">是</el-radio>
+            <el-radio label="false">否</el-radio>
+          </el-radio-group>
         </el-form-item>
         <el-form-item label="申请人" prop="consumerUserName">
           <el-input v-model="temp.consumerUserName" disabled />
@@ -191,7 +213,7 @@ export default {
   },
   data() {
     return {
-      // 申请consumer模糊搜索选择对应topic {topicId,topicName}
+      // 申请consumer模糊搜索选择对应topic {topicId,topicName,topicType}
       topicOptions: [],
       // 申请consumer时模糊搜索 app的信息{appId, appName}
       appOptions: [],
@@ -216,6 +238,7 @@ export default {
       /**
        * 后端接口查询回来的列表
        *   [{consumerId,consumerName,consumerStatus,consumerRemark,consumerUserId,consumerUserName,consumerAppId,consumerAppName,consumerRemark,
+       *   consumerBroadcast,consumerFromMin
        *   topicId,topicName,
        *   consumerEnvs: [{envId,envName}]
        *   }]
@@ -246,11 +269,17 @@ export default {
         consumerAppId: undefined,
         consumerAppName: '',
         topicId: undefined,
+        topicName: '',
+        topicType: null,
         consumerRemark: '',
         // 选中的环境 num 为什么要放在temp里面 因为表单校验规则rule不允许独立
         checked_env_ids: [],
         // [{envId, envName}]
-        consumerEnvs: []
+        consumerEnvs: [],
+        // 广播消费
+        consumerBroadcast: false,
+        // 最早消费
+        consumerFromMin: false
       },
       // 所有enable的环境 {id, name, sortId, status}
       all_envs: [],
@@ -307,6 +336,7 @@ export default {
       if (selected) {
         this.temp.topicId = selected.topicId
         this.temp.topicName = selected.topicName
+        this.temp.topicType = selected.topicType
       }
     },
     // 申请consumer时选中app保存app的信息
@@ -351,7 +381,9 @@ export default {
             consumerUserName: item.consumerUserName,
             consumerAppId: item.consumerAppId,
             consumerAppName: item.consumerAppName,
-            consumerEnvs: item.consumerEnvs.map(env => { return { envId: env.envId, envName: env.envName } })
+            consumerEnvs: item.consumerEnvs.map(env => { return { envId: env.envId, envName: env.envName } }),
+            consumerBroadcast: item.consumerBroadcast,
+            consumerFromMin: item.consumerFromMin
           })
         )
 
@@ -388,7 +420,8 @@ export default {
         consumerAppId: undefined,
         consumerAppName: '',
         topicId: undefined,
-        consumerRemark: ''
+        consumerRemark: '',
+        topicType: null
       }
     },
     // 申请消费组
@@ -409,9 +442,11 @@ export default {
             userId: this.temp.consumerUserId,
             appId: this.temp.consumerAppId,
             topicId: this.temp.topicId,
-            remark: this.temp.consumerRemark
+            remark: this.temp.consumerRemark,
+            consumerBroadcast: this.temp.consumerBroadcast,
+            consumerFromMin: this.temp.consumerFromMin
           }
-          console.log('申请consumer的请求是', data)
+          console.log('申请consumer的请求是', data, '此时temp是', this.temp)
           createConsumer(data).then((resp) => {
             // 接口返回的consumer id渲染到页面
             const data = resp.data
@@ -428,8 +463,11 @@ export default {
               consumerStatus: 1,
               consumerRemark: this.temp.consumerRemark,
               // [{envId, envName}]
-              consumerEnvs: data.consumerEnvs
+              consumerEnvs: data.consumerEnvs,
+              consumerBroadcast: this.temp.consumerBroadcast,
+              consumerFromMin: this.temp.consumerFromMin
             }
+            console.log('新建consumer后放到内存的记录', newRow)
             this.allConsumers.unshift(newRow)
             this.createConsumerDialogFormVisible = false
             this.$notify({
