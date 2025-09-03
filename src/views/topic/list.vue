@@ -406,11 +406,7 @@ export default {
             topicEnvs: item.envs.map(env => { return { id: env.envId, name: env.envName } })
           })
         )
-
-        // Just to simulate the time of the request
-        setTimeout(() => {
-          this.listLoading = false
-        }, 1.5 * 1000)
+        this.listLoading = false
       })
     },
     // 所有的环境
